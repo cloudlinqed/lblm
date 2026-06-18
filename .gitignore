@@ -8,3 +8,9 @@ probe_*.py
 stress*.py
 results_*.txt
 scratch/
+
+# agent scratch outputs (no .txt deliverables in this repo)
+*.txt
+k192*
+lens*
+res_*
