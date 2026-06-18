@@ -340,28 +340,46 @@ This targets discriminative bits and ignores predictive-but-invariant ones.
 The discriminative slot (pos 9) is now the **highest** weight and a boundary bit (pos 4) is
 killed to 0.13 — exactly the intended correction over MI.
 
-*But held-out accuracy did NOT improve* (≈0.75/0.67/0.56 vs uniform 0.81/0.78/0.58). And the
-**decisive probe** (held-out L=3, 5 seeds) shows concentrating weight *hurts*:
+*But held-out accuracy did NOT improve.* Probe (held-out L=3, 5 seeds; numbers corrected after
+the verification pass — see §11a):
 
 | weighting | held-out intact | scrambled |
 |---|---:|---:|
 | uniform | 0.73 | 0.42 |
-| pos9 dominant (5×) | 0.58 | 0.35 |
-| **isolate pos9 only** | **0.50 (chance)** | 0.50 |
+| pos9 dominant (others=1, pos9=5×) | ~0.78 | — |
+| **isolate pos9 only (others≈0)** | **0.50 (chance)** | 0.50 |
+
+So concentrating weight on the discriminative bit **doesn't help** (≈ uniform), and *fully
+isolating* it **collapses to chance**.
 
 **Conclusion — the metric-tuning arc is exhausted.** No fixed per-bit weighting of the raw
-address can solve this, because the task needs **different bits at different generation steps**:
-the *first* answer bit needs the type slot (pos 9); the *second* needs the window (the just-emitted
-first bit). A single static weight vector cannot serve both — isolating pos 9 destroys the
-second-bit prediction and collapses to chance. The need is genuinely **query-conditional**.
+address (applied at retrieval) can solve this, because the task needs **different bits at
+different generation steps**: the *first* answer bit needs the type slot, the *second* needs
+the window (the just-emitted first bit). A single static weight vector cannot serve both. The
+need is genuinely **query-conditional**.
 
-**What the evidence now points to (next direction):** not a better fixed metric, but
-*query-dependent* weighting (**attention** proper — weights that depend on the current query)
-and/or a **learned encoder** that maps (window ++ history) into a body-invariant code where the
-type is cleanly separable while the window info is preserved for the autoregressive step. The
-project has, from the bit level up, ruled out the cheap fixes and arrived at the necessity of
-attention / learned representation — exactly the `[[hopfield]]`-and-attention convergence the
-design predicted.
+### 11a. Verification verdict (cycle 2c, 5-agent workflow, high confidence)
+
+- **Confirmed — no static *retrieval* weighting works.** An agent *optimised* over arbitrary
+  static vectors: best held-out caps at **~0.80**, never near 0.85; at L=3 the search optimum
+  even overfits *below* uniform (0.67 < 0.73). Contrastive does not beat uniform (reproduced).
+- **Mechanism confirmed independently.** The discriminative position moves per step:
+  L=3 step1 = {9}, step2 = {5,8}; L=4 step1 = {8}, step2 = {5,7} (pos9/8 = the type bit's depth
+  in the h=4 state; pos5 = the just-emitted answer bit). Cleanest proof it is step-dependence,
+  not error propagation: under isolate-pos9, first-bit acc = 0.90 but the **teacher-forced**
+  second bit (handed the *true* first bit) = 0.50 = chance.
+- **Correction to my earlier number.** I had reported "pos9-dominant-5× → 0.58"; that does **not**
+  reproduce — with a non-suppressed base it is ~0.78 (within seed noise of uniform). The
+  conclusion (capped well below 0.85) stands; the 0.58 figure was an artifact of an
+  over-suppressed base vector.
+- **Scope caveat.** Weights are consumed only by retrieval (`pressure`); `learn`'s
+  allocation/ranking still use *unweighted* Hamming. A static vector applied to ranking *too*
+  (a different machine) showed a suggestive +0.05–0.13 at L3/L4 (reaching ~0.85) — but its
+  scramble control was not confirmed, so it is not endorsed as a counterexample. The claim is
+  scoped to **retrieval-only** weighting.
+- **Caveat on the next step.** Query-conditional weighting targets the *step-dependence*
+  problem; at L ≥ 6 the discriminative signal itself flattens toward uniform, so it is unlikely
+  to rescue the long-horizon (signal-decay) regime.
 
 ---
 
@@ -371,12 +389,38 @@ design predicted.
 - Recurrent memory works, with an exact horizon `L = R+h−4` (hard step, 16-cell grid).
 - Genuine body-invariant rule transfer to unseen bodies (rule-scramble control: +0.22–0.31),
   bounded at ~0.78 inside the band.
-- The ~0.78 ceiling is **not** a feature-weighting problem: static MI fails, static contrastive
-  finds the right bit but doesn't help, and hard isolation collapses to chance.
+- The ~0.78 ceiling is **not** a retrieval-weighting problem: static MI fails, static contrastive
+  finds the right bit but doesn't help, optimised static vectors cap ~0.80, and the
+  discriminative bit moves per step (so a fixed vector cannot serve all steps).
 
-**The single open frontier:** query-conditional / learned representation (attention or a learned
-recurrent encoder). Every cheaper alternative (wider window, hand-coded compression, marginal
-weighting, contrastive weighting, hard isolation) has been built and ruled out with evidence.
+### 12a. Cycle 2d — query-conditional readout (`--weights conditional`) also fails
+
+The attention-style readout (weights recomputed per query from the local confusion near `q`) was
+the evidence-pointed next step. Tested head-to-head with uniform (held-out, K=24, 5 seeds):
+
+| L | uniform intact | conditional intact | Δ |
+|---|---:|---:|---:|
+| 3 | 0.73 | 0.73 | +0.00 |
+| 4 | 0.73 | 0.70 | −0.03 |
+| 6 | 0.53 | 0.58 | +0.05 |
+
+A `cond_k × radius` sweep ({8,16,32} × {2,3,4}) never beat uniform (best ≈0.73–0.75). **Result:
+query-conditional readout does not break the ceiling either.**
+
+**The sharpened conclusion.** Changing the *readout* — static **or** query-conditional — cannot
+move the ceiling, because the verification confirmed weights only touch retrieval (`pressure`);
+`learn`'s allocation/ranking still use **unweighted** Hamming, so the memory is *built* uniformly
+regardless. On an unseen body the stored units simply do not encode the type cleanly, and no
+readout reweighting recovers what was never represented. **The ceiling is representational, not a
+metric.**
+
+**The open frontier (next chapter):** shape the *learning*, not the readout —
+1. **Weight allocation/ranking** (the verification's suggestive +0.05–0.13 path) so the
+   discriminative structure determines *which* units are stored; verify with the scramble control.
+2. **A learned recurrent encoder** that maps (window ++ history) into a body-invariant binary code
+   during training (the genuine "learned hash" — the discrete-bottleneck problem).
+
+Known limit for both: they target the in-band ceiling, not long-horizon signal decay (L ≥ R+h−4).
 
 ---
 

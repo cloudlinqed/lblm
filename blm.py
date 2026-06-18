@@ -12,7 +12,8 @@ already shifted out of the register:
     addr_mode = fold     : address = R-bit window ++ rotate/xor fold of ALL dropped bits
                            (A = R+h)  [fixed-width compressed history -> tests Hamming smoothness]
 
-Retrieval = Hamming proximity over the A-bit address, softened by exp(beta*(sim-A)).
+Retrieval = weighted Hamming proximity over the A-bit address, softened by the kernel
+exp(-beta * weighted_hamming)  (== exp(beta*(sim-A)) only under uniform weights).
 Output = signed strength-weighted vote -> threshold. Learning is a gradient-free binary SOM
 (reinforce+pull nearest correct, weaken+push wrong-voters, allocate when no correct neighbour,
 anneal, merge). mode=frozen keeps addresses immobile; mode=mobile lets them move.

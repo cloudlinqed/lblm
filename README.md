@@ -92,6 +92,7 @@ contrastive weighting, hard isolation) has been built and ruled out with evidenc
 
 | File | What it is |
 |---|---|
+| [`ARCHITECTURE.md`](ARCHITECTURE.md) | Schematic / diagrams (inference loop, learning loop, address layout, benchmark) |
 | [`blm.py`](blm.py) | The machine: learned-address memory, recurrent addresses, SOM learning, readout weighting |
 | [`bench.py`](bench.py) | Long-range recall benchmark + memory-curve experiment (a controlled capability probe) |
 | [`bit_native_predictive_machine.md`](bit_native_predictive_machine.md) | v1 design — the original bit-native machine concept |

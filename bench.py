@@ -109,7 +109,7 @@ def run_once(R, addr, h, L, K, seed, epochs, holdout=False, scramble=False, weig
 def memory_curve(R, K, seed, epochs, Ls, holdout):
     print(f"=== Long-range recall: memory curve  (R={R}, K={K} bodies, "
           f"{'HELD-OUT bodies' if holdout else 'in-sample'}, seed={seed}) ===")
-    print("answer-accuracy vs gap L  (chance = 0.50; horizon: register=R, shift/fold=R+h)\n")
+    print("answer-accuracy vs gap L  (chance = 0.50; horizon: register=R-4, shift/fold=R+h-4)\n")
     modes = [("register", 0), ("shift", 4), ("fold", 4)]
     head = "  L  | " + " | ".join(f"{a + ('+'+str(h) if a!='register' else ''):>10}" for a, h in modes)
     print(head); print("-" * len(head))
