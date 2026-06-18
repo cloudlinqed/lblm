@@ -424,6 +424,57 @@ Known limit for both: they target the in-band ceiling, not long-horizon signal d
 
 ---
 
+## 13. Methodology — measuring learning vs memorization at the bit level
+
+A caution that shapes how every result here is read: **"memorization vs generalization" is partly
+an *assumption* in a bit-native model, not a clean dichotomy.** With a vocabulary of 2, every
+stored pattern is shared across a large Hamming neighbourhood, so *storage is itself an
+interpolation mechanism* — a bit-kNN that "looks up" patterns is functionally generative when it
+recombines stored bit-fragments into sequences it never saw. Flat exact-held-out accuracy
+therefore should **not** be read as "memorization."
+
+Two assumption-free instruments are used instead:
+
+1. **Rule-scramble control.** Randomise the rule (type→answer) per body so no transferable rule
+   exists. The **scramble gap** = held-out(intact) − held-out(scrambled) is the amount of genuine
+   rule transfer; a pure memoriser ties both arms (gap ≈ 0). This also controls for capacity: the
+   scrambled arm has the *same* unit count, so an above-chance intact arm is not "just more units."
+2. **Dataset-size learning curve.** Plot held-out vs training size `K`. Memorization → flat;
+   genuine rule-learning → the scramble gap **grows with `K`** (more data → better rule → better
+   transfer). Corroborating clue: in these experiments more `K` helps but more *epochs* do not —
+   the signature of generalisation (epochs only re-fit the same data).
+
+## 14. Cycle 3 — allocation weighting (option 1): the capacity control flips it
+
+Option 1 applied the discriminative weights to `learn`'s ranking/allocation (`--weight-learn`),
+not just the readout. A first learning curve looked like a win (intact ~0.85 vs uniform ~0.71).
+But adding a **capacity control** — plain uniform forced to allocate as many units
+(`alloc_radius=0`) — reversed the conclusion (L=4, held-out, 6 seeds):
+
+| variant | K=24 | K=48 | K=96 | units |
+|---|---|---|---|---|
+| uniform (r=1) | 0.71 / +.29 | 0.65 / +.17 | 0.74 / +.36 | ~44 |
+| **uniform MAXCAP (r=0)** | 0.74 / +.35 | 0.81 / +.38 | **0.83 / +.45** | ~117 |
+| contr/LEARN (option 1) | 0.76 / +.32 | 0.81 / +.38 | **0.84 / +.45** | ~68 |
+
+*(cells = intact / scramble-gap.)* **Capacity-matched uniform matches option 1.** The
+discriminative weighting was *not* the active ingredient — it helped only by *incidentally
+allocating more units*. **The lever is capacity (unit count) + data, not the weighting.**
+
+**What is real (confirmed by the scramble + capacity controls):**
+- **It genuinely learns the rule.** The scramble gap grows with `K` (+0.29 → +0.45) and intact
+  rises to **~0.84 at K=96** — and the scrambled arm stays at chance with the *same* unit count,
+  so this is not memorization-by-capacity. (See §13.)
+- The earlier "~0.78 ceiling" was largely a **capacity/coverage limit**, not purely
+  representational: more units + more data → ~0.84.
+
+**Open:** whether more capacity/data pushes held-out toward 1.0 or asymptotes ~0.85 (a genuine
+representational limit from body-noise vs the lone type bit under uniform Hamming). _Under
+verification._ This is what a **learned encoder** (compress the body out → fewer units needed)
+would address next.
+
+---
+
 ## Appendix — prior-art map (search terms, all bit/discrete, not LLM-specific)
 
 - **Semantic hashing** — learn compact binary codes preserving similarity (the learned "hash").

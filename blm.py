@@ -192,6 +192,15 @@ class Machine:
     def _readout(self, q):
         return self.predict_c(q) if self.p.get("weight_mode") == "conditional" else self.predict(q)
 
+    def _ldist(self, q, addr):
+        """Distance used during LEARNING (ranking, nearest-correct, alloc/push radius).
+        If weight_learn is on, the discriminative weights also shape WHICH units are stored
+        and reinforced — not just the readout vote. Else plain Hamming (default)."""
+        if self.p.get("weight_learn"):
+            W = self.weights
+            return sum(W[i] for i in range(len(addr)) if addr[i] != q[i])
+        return hamming(q, addr)
+
     def _pull(self, addr, q, prob, max_move):
         diff = [i for i in range(len(addr)) if addr[i] != q[i]]
         self.move_rng.shuffle(diff)
@@ -210,9 +219,9 @@ class Machine:
         p = self.p
         move_prob = p["move_prob"] * (p["anneal"] ** t)
         yhat, _ = self.predict(q)
-        ranked = sorted(self.units, key=lambda u: hamming(q, u["addr"]))
+        ranked = sorted(self.units, key=lambda u: self._ldist(q, u["addr"]))
         nearest_correct = next((u for u in ranked if u["val"] == y), None)
-        if nearest_correct is None or hamming(q, nearest_correct["addr"]) > p["alloc_radius"]:
+        if nearest_correct is None or self._ldist(q, nearest_correct["addr"]) > p["alloc_radius"]:
             self.units.append({"addr": list(q), "val": y, "w": p["w_init"]})
             nearest_correct = self.units[-1]
         nearest_correct["w"] += p["lr_w"]
@@ -220,7 +229,7 @@ class Machine:
             self._pull(nearest_correct["addr"], q, move_prob, p["max_move"])
         if yhat != y:
             for u in ranked[:p["k_push"]]:
-                if u["val"] != y and hamming(q, u["addr"]) <= p["push_radius"]:
+                if u["val"] != y and self._ldist(q, u["addr"]) <= p["push_radius"]:
                     u["w"] = max(p["w_min"], u["w"] - p["lr_w"])
                     if p["mode"] == "mobile":
                         self._push(u["addr"], q, move_prob, p["max_move"])
@@ -349,6 +358,7 @@ def default_params(args):
         "addr_mode": args.addr, "A": args.R + (args.hist if args.addr != "register" else 0),
         "epochs": args.epochs, "seed": args.seed, "beta": args.beta,
         "weight_mode": getattr(args, "weights", "uniform"),
+        "weight_learn": getattr(args, "weight_learn", False),
         "contrast_radius": getattr(args, "contrast_radius", 3),
         "cond_k": getattr(args, "cond_k", 16),
         "lr_w": 0.5, "w_init": 1.0, "w_min": 0.0,
@@ -376,6 +386,8 @@ def main():
                     default="uniform",
                     help="bit weighting (mi=marginal MI; contrastive=static separates collisions; "
                          "conditional=query-conditional/attention readout)")
+    ap.add_argument("--weight-learn", dest="weight_learn", action="store_true",
+                    help="apply the weights to learning (ranking/allocation), not just readout")
     ap.add_argument("--contrast-radius", dest="contrast_radius", type=int, default=3)
     ap.add_argument("--cond-k", dest="cond_k", type=int, default=16,
                     help="conditional readout: # nearest units to derive local weights from")
