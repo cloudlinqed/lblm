@@ -1,0 +1,10 @@
+# Python
+__pycache__/
+*.pyc
+
+# Experiment scratch / agent probe scripts (not part of the deliverable)
+_*.py
+probe_*.py
+stress*.py
+results_*.txt
+scratch/
