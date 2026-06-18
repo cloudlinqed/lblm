@@ -85,8 +85,10 @@ flowchart TD
   NEXT -.->|once per epoch, after the full pass| MERGE["merge duplicate (addr, val)<br/>in train()"]
 ```
 
-`compute_weights` feeds the **readout vote only**; `learn`'s ranking and allocation always use
-plain unweighted Hamming. `merge` runs once per epoch in `train()`, not per pair.
+`compute_weights` feeds the **readout vote only** by default; `--weight-learn` extends it to
+`learn`'s ranking and allocation. `merge` runs once per epoch in `train()`, not per pair.
+**Capacity knob:** `prune_to(n)` (after training) keeps the `n` strongest units, so any config can
+be placed at any unit count — used to show that *capacity*, not the weighting, is the lever.
 
 ## 5. Readout weighting (`--weights`)
 

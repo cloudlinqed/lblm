@@ -244,6 +244,13 @@ class Machine:
                 bucket[key] = {"addr": list(u["addr"]), "val": u["val"], "w": u["w"]}
         self.units = list(bucket.values())
 
+    def prune_to(self, n):
+        """Continuous capacity knob: keep the n strongest units (drop the rest). Lets any
+        config be placed at any unit count for a count-matched comparison (integer Hamming
+        otherwise only reaches discrete counts)."""
+        if n and len(self.units) > n:
+            self.units = sorted(self.units, key=lambda u: u["w"], reverse=True)[:n]
+
     def train(self, pairs):
         self.compute_weights(pairs)
         t = 0
@@ -254,6 +261,8 @@ class Machine:
                 self.learn(q, y, t)
                 t += 1
             self.merge()
+        if self.p.get("prune_to"):
+            self.prune_to(self.p["prune_to"])
 
     def generate(self, seed, n):
         p = self.p
@@ -359,6 +368,7 @@ def default_params(args):
         "epochs": args.epochs, "seed": args.seed, "beta": args.beta,
         "weight_mode": getattr(args, "weights", "uniform"),
         "weight_learn": getattr(args, "weight_learn", False),
+        "prune_to": getattr(args, "prune_to", 0),
         "contrast_radius": getattr(args, "contrast_radius", 3),
         "cond_k": getattr(args, "cond_k", 16),
         "lr_w": 0.5, "w_init": 1.0, "w_min": 0.0,
@@ -388,6 +398,8 @@ def main():
                          "conditional=query-conditional/attention readout)")
     ap.add_argument("--weight-learn", dest="weight_learn", action="store_true",
                     help="apply the weights to learning (ranking/allocation), not just readout")
+    ap.add_argument("--prune-to", dest="prune_to", type=int, default=0,
+                    help="after training, keep only the N strongest units (capacity knob; 0=off)")
     ap.add_argument("--contrast-radius", dest="contrast_radius", type=int, default=3)
     ap.add_argument("--cond-k", dest="cond_k", type=int, default=16,
                     help="conditional readout: # nearest units to derive local weights from")

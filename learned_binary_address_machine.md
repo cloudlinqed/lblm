@@ -498,6 +498,37 @@ TYPE bit *does* lift the ~0.88 ceiling at matched capacity, the asymptote is a u
 representational floor that a **learned encoder** (compress the body out) would remove — which the
 body-length sweep already points to.
 
+### 14b. Cycle 3b — matched-capacity comparison (continuous capacity knob)
+
+Implemented the capacity knob: `Machine.prune_to(n)` (and `--prune-to`) keeps the `n` strongest
+units after training, so any config can be placed at *any* unit count for a clean head-to-head.
+Results (K=64, L=4, held-out, 4 seeds; alloc=0 pool then prune to `N`):
+
+**Capacity curve** (intact accuracy):
+
+| N | 40 | 55 | 70 | 85 | 100 |
+|---|---|---|---|---|---|
+| uniform | 0.68 | 0.73 | 0.80 | 0.77 | 0.77 |
+| weighted (LEARN) | 0.73 | 0.80 | 0.80 | 0.80 | 0.83 |
+
+**Matched N=68 head-to-head** (intact / scramble): uniform **0.80 / 0.38** == weighted **0.80 / 0.38**.
+
+**Conclusion — claim 1 fully closed.** At the contested 68-unit point the two are an *exact tie*;
+across the curve the weighting shows at most a small, noisy +0.03–0.07 edge, none robust. So the
+residual count-matching confound is closed: **capacity + data is the lever, not the discriminative
+weighting.** Confidence upgraded from medium toward high.
+
+**Floor test** (matched N=85, L4 vs L6): uniform L4 0.77 → **L6 0.48**; weighted L4 0.80 → **L6 0.53**.
+Both collapse toward chance as the body lengthens (the L6 absolute is also data/capacity-limited at
+K=64); weighting adds only +0.05 and does **not** rescue it. The longer-body ceiling is a **genuine
+representational floor** of (static-weighted) Hamming.
+
+**Cycle 3 is concluded.** The machine genuinely learns a transferable rule (scramble + capacity
+controlled), scaling with data to ~0.88–0.90; the lever is capacity + data, not any weighting; and
+the residual ceiling is representational and grows with body length. The evidence-pointed next
+chapter is the **learned encoder** — compress the body out so the type stays separable — not any
+further metric, weighting, or capacity tweak.
+
 ---
 
 ## Appendix — prior-art map (search terms, all bit/discrete, not LLM-specific)
