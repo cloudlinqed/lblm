@@ -468,10 +468,35 @@ allocating more units*. **The lever is capacity (unit count) + data, not the wei
 - The earlier "~0.78 ceiling" was largely a **capacity/coverage limit**, not purely
   representational: more units + more data → ~0.84.
 
-**Open:** whether more capacity/data pushes held-out toward 1.0 or asymptotes ~0.85 (a genuine
-representational limit from body-noise vs the lone type bit under uniform Hamming). _Under
-verification._ This is what a **learned encoder** (compress the body out → fewer units needed)
-would address next.
+### 14a. Verification verdict (cycle 3, 4-agent workflow, medium confidence)
+
+- **Capacity is the lever — confirmed.** The clean control: contrastive *readout-only* allocates
+  the *identical* unit counts as uniform (seed-for-seed), and there weighting **never wins**
+  (e.g. K96 0.674 vs 0.667 at 41 units). The apparent `contr/LEARN` edge is **unit-efficiency**:
+  `weight_learn` shifts allocation into a ~68-unit band that integer-Hamming uniform cannot
+  discretely occupy (its reachable counts are ~17/36/117). At matched-or-higher capacity, plain
+  uniform *allocate-every-step* reaches **0.94**, matching/beating weighting — so accuracy tracks
+  the **capacity / exact-context** axis, not the discriminative metric.
+- **Genuine learning — strongly confirmed.** The scrambled arm stays at chance (~0.40–0.48) while
+  carrying *strictly more* units than the intact arm (K96: scramble 174u @ ~0.45 vs intact 117u @
+  ~0.88). Extra capacity with no rule buys nothing → this is transferable rule recall, not
+  memorization-by-capacity. The scramble gap grows monotonically with `K`.
+- **Asymptote ~0.88–0.90, not 1.0 (and not a flat 0.85).** Held-out rises monotonically to
+  **0.896 at K=192**. The residual gap is **jointly data-limited** (units saturate at 117 by K=48
+  yet accuracy keeps climbing to K=192) **and representation-limited**: a body-length sweep (K96,
+  max capacity) gives L2 = 0.76, L4 = 0.75, **L6 = 0.69** — accuracy *falls as the body grows
+  despite more units*, because the lone discriminative TYPE bit is **diluted by body-noise** in the
+  unweighted vote.
+
+**Residual confound (why medium, not high):** integer Hamming makes unit count discrete, so plain
+uniform could not be placed at *exactly* `contr/LEARN`'s 68-unit point for a perfect head-to-head.
+
+**Next step (closes the confound and tests the floor):** add a **continuous capacity knob**
+(prune/subsample the unit set, or a real-valued allocation threshold) to set uniform at any unit
+count. Then (a) count-matched uniform vs weighting settles claim 1 fully, and (b) if weighting the
+TYPE bit *does* lift the ~0.88 ceiling at matched capacity, the asymptote is a uniform-Hamming
+representational floor that a **learned encoder** (compress the body out) would remove — which the
+body-length sweep already points to.
 
 ---
 
