@@ -48,6 +48,8 @@ Three ways to build the state (`--addr`), and the memory horizon each buys on th
  register :  state is empty                         A = R       memoryless    horizon  R-4
  shift    :  state = last h dropped bits            A = R + h   wider window  horizon  R+h-4
  fold     :  state = rotate(state) XOR (mask if d)  A = R + h   xor-compress  no clean horizon
+ learned  :  state = g[state, dropped bit]          A = R + h   LEARNED code  (g hill-climbed;
+                                                                shift/fold are fixed points)
 ```
 
 ## 3. A unit, and retrieval

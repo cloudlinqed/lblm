@@ -531,6 +531,50 @@ further metric, weighting, or capacity tweak.
 
 ---
 
+## 15. Cycle 4 — the learned encoder (`encoder.py`)
+
+The recurrent state update becomes a **learned** transition table `g: (state, dropped bit) →
+state` (`addr_mode='learned'`, `h=3` → 16 entries); `shift` and `fold` are fixed points of this
+family. Clean protocol: memory trains on *train* bodies, `g` is selected on *dev* bodies, reported
+on separate *test* bodies with the rule-scramble control.
+
+**Attempt 1 — hill-climbing the table FAILED (the search overfit).** The hill-climbed `g` overfit
+the 8-body dev set (dev 0.75 → test L6 **0.46**, gap +0.06) and *degraded* L4 to 0.48 (vs shift
+0.83). A free 16-entry table scored on 8 dev bodies is too overfittable.
+
+**Diagnostic — the *structure* is sufficient (hand-built latch).** Key insight: `g` sees only the
+dropped bit's *value*, not its position — but the TYPE bit is the *first* bit to drop, so "absorb
+the first drop and hold it" is expressible. A hand-built **latch** (state 0 → absorbing state
+4/5 keyed on the first drop, held forever) removes the memory horizon. Confirmed (K=40, 6 seeds,
+held-out, intact / scramble-gap):
+
+| L | shift | latch |
+|---|---|---|
+| 4 | 0.83 (+0.48) | 0.78 (+0.44) |
+| 6 | 0.31 (**−0.11**) | 0.61 (**+0.21**) |
+| 8 | 0.38 (−0.02) | 0.64 (+0.20) |
+| 10 | 0.36 (−0.01) | 0.66 (+0.27) |
+
+`shift` collapses to a *zero/negative gap* past its horizon (R+h−4 = 5); the **latch holds a real,
+scramble-controlled signal across L6–L10**. A learned recurrent code removes the horizon.
+
+**Conclusions (cycle 4):**
+1. **The learned-code structure is sufficient** — a latch carries the discriminative bit
+   *arbitrarily far*, where the fixed shift/window cannot. This is the first mechanism to beat the
+   horizon, not just the in-band ceiling.
+2. **The bottleneck is the *learning*, not the representation.** Naive hill-climbing on a small dev
+   set did not find the latch — this is the long-range **credit-assignment** problem (the answer
+   supervision is far from where the latch must fire).
+3. **Residual:** even with the latch, the long-range gap (~+0.25) is below the short-range gap
+   (+0.44) — the *window* body-noise still dilutes retrieval. A fuller encoder must **compress the
+   window too**, not only latch the history.
+
+**Next:** *learn* the latch — a credit-assignment method or a structured gating prior that can
+discover "latch the first informative drop and hold" from answer-level supervision — plus window
+compression for the residual.
+
+---
+
 ## Appendix — prior-art map (search terms, all bit/discrete, not LLM-specific)
 
 - **Semantic hashing** — learn compact binary codes preserving similarity (the learned "hash").

@@ -44,8 +44,21 @@ def hamming(a, b):
     return sum(1 for x, y in zip(a, b) if x != y)
 
 
-def fold_state(s, d, addr_mode, h):
-    """Update the h-bit recurrent state with the bit `d` that just left the register."""
+def _bits_to_int(s):
+    v = 0
+    for b in s:
+        v = (v << 1) | b
+    return v
+
+
+def _int_to_bits(v, h):
+    return [(v >> (h - 1 - i)) & 1 for i in range(h)]
+
+
+def fold_state(s, d, addr_mode, h, g=None):
+    """Update the h-bit recurrent state with the bit `d` that just left the register.
+    addr_mode='learned' uses a LEARNED transition table g: index (state_int*2 + d) -> new
+    state as an int in [0, 2^h). shift and fold are fixed points of this table family."""
     if addr_mode == "register" or h == 0:
         return s
     if addr_mode == "shift":
@@ -56,17 +69,25 @@ def fold_state(s, d, addr_mode, h):
             mask = [1 if i % 2 == 0 else 0 for i in range(h)]
             s2 = [b ^ m for b, m in zip(s2, mask)]      # fold dropped bit into the whole state
         return s2
+    if addr_mode == "learned":
+        return _int_to_bits(g[_bits_to_int(s) * 2 + d], h)
     raise ValueError(addr_mode)
 
 
-def make_pairs(stream, R, addr_mode="register", h=0):
+def shift_table(h):
+    """The shift rule expressed as a learned-style transition table (good init for search)."""
+    mask = (1 << h) - 1
+    return [((st << 1) | d) & mask for st in range(1 << h) for d in (0, 1)]
+
+
+def make_pairs(stream, R, addr_mode="register", h=0, g=None):
     """Every step -> (address, next bit). Address carries recurrent history per addr_mode."""
     pairs = []
     s = [0] * h if addr_mode != "register" else []
     for i in range(len(stream) - R):
         window = list(bits(stream[i:i + R]))
         pairs.append((tuple(window + list(s)), int(stream[i + R])))
-        s = fold_state(s, int(stream[i]), addr_mode, h)   # the bit leaving as i advances
+        s = fold_state(s, int(stream[i]), addr_mode, h, g)   # the bit leaving as i advances
     return pairs
 
 
@@ -274,7 +295,7 @@ class Machine:
             out.append(b)
             d = window[0]
             window = window[1:] + [b]
-            s = fold_state(s, d, p["addr_mode"], p["h"])
+            s = fold_state(s, d, p["addr_mode"], p["h"], p.get("learned_g"))
         return out
 
     def generate_primed(self, prefix, n):
@@ -286,14 +307,14 @@ class Machine:
         window = prefix[-R:] if len(prefix) >= R else [0] * (R - len(prefix)) + prefix
         s = [0] * h if p["addr_mode"] != "register" else []
         for d in prefix[:max(0, len(prefix) - R)]:        # bits already shifted out of window
-            s = fold_state(s, d, p["addr_mode"], h)
+            s = fold_state(s, d, p["addr_mode"], h, p.get("learned_g"))
         out = []
         for _ in range(n):
             b, _ = self._readout(tuple(window + list(s)))
             out.append(b)
             d = window[0]
             window = window[1:] + [b]
-            s = fold_state(s, d, p["addr_mode"], h)
+            s = fold_state(s, d, p["addr_mode"], h, p.get("learned_g"))
         return out
 
     def utilisation(self):
