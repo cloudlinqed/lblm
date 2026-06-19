@@ -78,23 +78,29 @@ of the original conclusions were **refuted** and corrected.
    shows the machine transfers `answer = f(type)` to *unseen* bodies (intact ≈0.72–0.78 vs
    scrambled ≈0.44–0.53) — real generalisation, but only inside the memory band and capped
    ~0.78.
-5. **The ~0.78 ceiling is not a feature-weighting problem.** Static MI weighting rewards
-   predictive-but-class-invariant bits (e.g. a boundary) and fails; static contrastive
-   weighting finds the *right* discriminative bit yet still doesn't help; hard-isolating that
-   bit collapses to chance — because the task needs **different bits at different generation
-   steps**. The need is genuinely **query-conditional**.
+5. **The in-band ceiling is capacity + data, not the readout metric.** No static *or*
+   query-conditional weighting moves it (at matched unit count, weighting ties uniform exactly);
+   the lever is capacity and data, and the residual is a uniform-Hamming representational floor
+   that worsens as nuisance dimensions grow.
+6. **A learned recurrent code removes the memory horizon.** The recurrent state update becomes a
+   learned transition table; a **gated-latch** family (a write-gate with a latch prior, a few
+   learnable bits) is *reliably learned* from data (recovers "latch the first informative bit and
+   hold") and holds the signal to **body length 1000**, where the fixed `shift` window collapses
+   past `L = R+h−4`. Verified high-confidence (8-seed, scramble-controlled, z = 3.4–7.6).
 
-**Current frontier:** query-conditional weighting (attention) and/or a learned recurrent
-encoder. Every cheaper alternative (wider window, hand-coded compression, marginal weighting,
-contrastive weighting, hard isolation) has been built and ruled out with evidence.
+**Current frontier:** **window/body compression.** The encoder is horizon-free, but long-range
+accuracy still attenuates because the (body × state) space the readout must cover grows with
+length — so the remaining limit is the *readout*, not the memory.
 
 ## Repository layout
 
 | File | What it is |
 |---|---|
 | [`ARCHITECTURE.md`](ARCHITECTURE.md) | Schematic / diagrams (inference loop, learning loop, address layout, benchmark) |
-| [`blm.py`](blm.py) | The machine: learned-address memory, recurrent addresses, SOM learning, readout weighting |
+| [`blm.py`](blm.py) | The machine: learned-address memory, recurrent addresses, SOM learning, readout weighting, learned/gated-latch encoder |
 | [`bench.py`](bench.py) | Long-range recall benchmark + memory-curve experiment (a controlled capability probe) |
+| [`encoder.py`](encoder.py) | Cycle 4 — hill-climb a learned recurrent encoder; the hand-built latch diagnostic |
+| [`gated.py`](gated.py) | Cycle 5 — learn the gated-latch write-schedule; horizon-removal comparison |
 | [`bit_native_predictive_machine.md`](bit_native_predictive_machine.md) | v1 design — the original bit-native machine concept |
 | [`learned_binary_address_machine.md`](learned_binary_address_machine.md) | v2 design + full results, lessons, and verification verdicts |
 | [`sweep.jsonl`](sweep.jsonl) | Recorded metrics from the parameter sweep |
