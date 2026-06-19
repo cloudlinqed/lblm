@@ -80,6 +80,31 @@ def shift_table(h):
     return [((st << 1) | d) & mask for st in range(1 << h) for d in (0, 1)]
 
 
+def gated_latch_table(w, h=4):
+    """A STRUCTURED encoder family: a write-gate with a latch prior, parameterised by a short
+    binary write-schedule `w` (only len(w) learnable bits). State has a latched flag (top bit):
+      * open state encodes a step counter; on the k-th dropped bit, if w[k]==1 -> LATCH that bit's
+        value and hold forever; else advance the counter (stay open);
+      * latched states are absorbing (hold).
+    w=[1,0,0,...] latches the FIRST dropped bit (the type) and holds = the hand-built latch.
+    This makes 'latch the first informative drop' LEARNABLE from a tiny (2^len(w)) space, instead
+    of the free 2^h-entry table that overfits."""
+    size, C, LAT = 1 << h, len(w), 1 << (h - 1)
+    g = [0] * (size * 2)
+    for st in range(size):
+        for d in (0, 1):
+            idx = st * 2 + d
+            if st & LAT:                       # latched -> hold (absorbing)
+                g[idx] = st
+            else:
+                c = st if st < C else C - 1    # open-step counter (capped)
+                if w[c]:
+                    g[idx] = LAT | d           # latch this dropped bit's value, set flag
+                else:
+                    g[idx] = min(st + 1, LAT - 1)   # advance counter, stay open
+    return g
+
+
 def make_pairs(stream, R, addr_mode="register", h=0, g=None):
     """Every step -> (address, next bit). Address carries recurrent history per addr_mode."""
     pairs = []

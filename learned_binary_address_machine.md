@@ -575,6 +575,45 @@ compression for the residual.
 
 ---
 
+## 16. Cycle 5 — the learnable gated latch (`gated.py`)
+
+To make the latch *learnable* (cycle 4 showed the free table overfits), use a **structured
+encoder family** — a write-gate with a latch prior, parameterised by a short binary write-schedule
+`w` of only `len(w)` bits (`blm.gated_latch_table`): on the `k`-th dropped bit, `w[k]=1` ⇒ latch
+that bit and hold; else advance. `w=[1,0,0,0]` is the hand latch. `w` is **learned** by
+enumerating its tiny `2^len(w)` space on *dev* bodies; compared to `shift` (horizon collapse) and a
+**free** transition table hill-climbed on the same dev set (the cycle-4 overfit baseline). Clean
+train/dev/test split + scramble control. Hypothesis: the low-parameter structured family is
+*learnable and generalises* where the high-capacity free table overfit.
+
+**Result — the latch is learnable.** Enumerating the schedule space on dev recovered
+**`w=[1,0,0,0]`** (the latch). Test (held-out, K=40, h=4, 4 seeds; intact / scramble / gap):
+
+| L | shift | free-table | gated-latch |
+|---|---|---|---|
+| 4 | 0.81 / +0.47 | 0.81 / +0.50 | 0.81 / +0.53 |
+| 6 | 0.64 / +0.11 | 0.70 / +0.14 | 0.59 / +0.17 |
+| 8 | 0.41 / +0.03 | 0.59 / +0.17 | 0.61 / +0.12 |
+| 10 | 0.36 / **+0.02** | 0.41 / +0.19 | **0.72 / +0.33** |
+
+**Conclusions (cycle 5):**
+1. **The latch is learnable via a structured prior.** The tiny schedule space recovered the clean
+   latch `w=[1,0,0,0]` from data — the inductive bias makes learnable what the free `2^h` table did
+   not reliably find.
+2. **The learned gated-latch removes the horizon.** At L10, `shift` is dead (gap +0.02) while the
+   gated-latch holds strongly (0.72, gap +0.33).
+3. **Nuance vs the free table.** At `h=4` the free table *also* partially learned a latch-like rule
+   (it beats `shift` at L8/L10), so it was not as catastrophic as at `h=3` — but the gated-latch is
+   cleaner and clearly best at the extreme (L10: 0.72 vs 0.41). The structured family is the more
+   reliable route.
+
+**Residual & caveats:** absolute accuracy (~0.81 in-band, ~0.72 at L10) still reflects the
+**window-noise** dilution (the latch carries the type but the window body bits vary) — a fuller
+encoder must compress the window too. Numbers are 4-seed / 8-body (noisy; the L6 dip is within
+noise). _Adversarial verification in progress._
+
+---
+
 ## Appendix — prior-art map (search terms, all bit/discrete, not LLM-specific)
 
 - **Semantic hashing** — learn compact binary codes preserving similarity (the learned "hash").
