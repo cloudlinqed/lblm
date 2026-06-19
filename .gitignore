@@ -14,3 +14,11 @@ scratch/
 k192*
 lens*
 res_*
+
+# whitelist: ignore stray top-level .py (agent scratch); deliverable modules stay tracked
+/*.py
+!blm.py
+!bench.py
+!encoder.py
+!gated.py
+gv_out/
