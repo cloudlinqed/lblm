@@ -607,10 +607,30 @@ train/dev/test split + scramble control. Hypothesis: the low-parameter structure
    cleaner and clearly best at the extreme (L10: 0.72 vs 0.41). The structured family is the more
    reliable route.
 
-**Residual & caveats:** absolute accuracy (~0.81 in-band, ~0.72 at L10) still reflects the
-**window-noise** dilution (the latch carries the type but the window body bits vary) — a fuller
-encoder must compress the window too. Numbers are 4-seed / 8-body (noisy; the L6 dip is within
-noise). _Adversarial verification in progress._
+_(The L10 table cell above is 4-seed and seed-noisy; the verification below corrects it.)_
+
+### 16a. Verification verdict (cycle 5, 4-agent workflow, high confidence)
+
+- **Latch reliably learned — confirmed.** The 16-schedule space collapses to 5 reachable
+  behaviours; all 8 schedules with `w[0]=1` are byte-identical "latch-first-drop", and the bench
+  TYPE is always the first drop — latching into an absorbing state, *verified to body length 1000*.
+  `learn_schedule` recovers the latch **8/8** at L=4/8/10; the L=6 5/8 case was a tie-break artifact
+  (now fixed — ties prefer the latch family, all-zeros excluded), not an overfit win.
+- **Horizon genuinely removed — confirmed.** `shift`'s address is identical across the two classes
+  for all L ≥ 8 (horizon R+h−4=6) while the gated address stays distinct; the 8-seed
+  scramble-controlled gated gap is significant at every L (z = 3.4–7.6).
+- **Gated beats free — confirmed (best-supported).** Gated wins 4/4 at L10/L12 (+0.27 / +0.21 raw,
+  non-overlapping per-split ranges); the free hill-climbed table overfits dev (≈0 held-out scramble
+  gap, negative on 2/4 splits at L12). The structured family **cannot** overfit (5-point reachable
+  space); it is the only encoder with above-chance scramble-controlled transfer at long L on every split.
+- **Correction:** the 4-seed "+0.33 at L10" did **not** replicate at 8 seeds — robust value
+  ≈ **+0.156**, and the gap **attenuates with L**: +0.156 / +0.102 / +0.078 at L10/12/14. The latch
+  removes the *horizon*, but the (body × latched-state) address space the SOM readout must cover
+  **grows with L**, so the readout (not the memory) now limits long-L accuracy.
+
+**Next — window/body compression.** The encoder is proven horizon-free; the remaining attenuation
+is a *readout* problem: fold/hash/down-weight the **window body bits** so only the latched
+TYPE-carrying state dominates the retrieval kernel, decoupling rule-readout from L.
 
 ---
 

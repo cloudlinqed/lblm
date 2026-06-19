@@ -40,14 +40,19 @@ def evalg(g, addr, h, L, K, seed, tr, te, scr, ep=250, alloc=0):
 
 
 def learn_schedule(L, K, tr, dev, h=4, C=4, seeds=3):
-    best_w, best = None, -1.0
+    # Tie-break (verification fix): on equal dev score prefer a latch (w[0]=1) with fewest writes,
+    # so chance-vs-chance dev ties don't default to the degenerate all-zeros schedule.
+    best_w, best_key = None, None
     for bits in itertools.product([0, 1], repeat=C):
         w = list(bits)
+        if sum(w) == 0:
+            continue                                  # degenerate: never latches
         g = blm.gated_latch_table(w, h)
         score = statistics.mean(evalg(g, "learned", h, L, K, s, tr, dev, False, ep=150, alloc=1) for s in range(seeds))
-        if score > best:
-            best, best_w = score, w
-    return best_w, best
+        key = (round(score, 3), 1 if w[0] else 0, -sum(w))
+        if best_key is None or key > best_key:
+            best_key, best_w = key, w
+    return best_w, best_key[0]
 
 
 def free_table(L, K, tr, dev, h=4, iters=80, seed=0):
