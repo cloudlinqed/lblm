@@ -114,6 +114,26 @@ def addr_of(window, s, win_keep=0):
     return tuple(list(w) + list(s))
 
 
+def multi_latch_table(k, h):
+    """Multi-feature latch: hold the first k dropped bits in a k-slot register, then freeze
+    (absorbing). Generalises the single latch (k=1). State = count*2^k + reg, count = how many
+    bits latched (0..k), reg = the latched bits. Needs 2^h >= (k+1)*2^k."""
+    need = (k + 1) * (1 << k)
+    if (1 << h) < need:
+        raise ValueError(f"h={h} too small for k={k}: need 2^h >= {need}")
+    size, mask = 1 << h, (1 << k) - 1
+    g = [0] * (size * 2)
+    for st in range(size):
+        count, reg = st >> k, st & mask
+        for d in (0, 1):
+            idx = st * 2 + d
+            if count < k:                                   # still latching: shift d in
+                g[idx] = ((count + 1) << k) | (((reg << 1) | d) & mask)
+            else:                                           # frozen: hold all k features
+                g[idx] = st
+    return g
+
+
 def make_pairs(stream, R, addr_mode="register", h=0, g=None, win_keep=0):
     """Every step -> (address, next bit). Address carries recurrent history per addr_mode.
     The register slides at width R (drives the state); win_keep controls how much of it the

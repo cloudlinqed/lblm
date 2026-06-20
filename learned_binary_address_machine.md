@@ -723,6 +723,41 @@ criterion, not a "flat-at-1.0 reliably-learned-constant" overclaim.
 
 ---
 
+## 18. Cycle 7 — multi-feature memory: does it compose? (`multi.py`)
+
+Does the structured-latch approach scale to remembering **more than one thing**? A 2-feature
+recall bench: `[TYPE1 TYPE2][shared BODY L][111][ANSWER 2b][000]`, answer = `f(t1,t2)` — **echo**
+(`[t1,t2]`, independent) and **xor** (`[t1^t2, t1^t2]`, joint, needs both features combined). The
+**multi-latch** (`blm.multi_latch_table(k,h)`) holds the first `k` dropped bits (the `k` type bits)
+then freezes; `k=1` is the single latch and can hold only one feature. `k` is **learned** on dev by
+the scramble-clean objective; body-disjoint split + per-body rule-scramble control.
+
+**Result — the structured latch COMPOSES.** `k=2` is learned for both modes. Pooled held-out
+(K=48, L=8, win_keep=3, 12 seeds, 95% CI):
+
+| answer | k=1 (one feature) | k=2 (both) | scramble |
+|---|---|---|---|
+| xor (joint) | 0.50±0.05 | **0.96±0.02** | 0.50 |
+| echo (independent) | 0.48±0.05 | **0.65±0.05** | 0.24 |
+
+- **Multi-feature memory works:** `k=2` holds both type bits, is CI-separably above `k=1`, and the
+  count `k` is itself learnable.
+- **The joint task (XOR) is solved cleanly (0.96)** — the readout combines two latched features;
+  `k=1` is exactly at chance (one feature carries no parity information).
+- **The independent 4-way task (echo) is only partially solved (0.65)** — counter-intuitively
+  *harder* than the joint XOR. The per-answer-bit diagnostic shows why: bit1 (`t1`, read from the
+  latch) = **0.90**, but the second *independent* bit (`t2`) = **0.73** even teacher-forced. For XOR
+  bit2 = parity = bit1, so it is **copied from the window** (1.00); for echo bit2 = `t2 ≠ t1`, so it
+  must be extracted from the latched state while body-internal `[1,1,*]` window collisions intrude.
+
+**Conclusion:** the **memory primitive composes** — multiple features are latched and held, and a
+*joint* function of them (XOR) is read out cleanly. The residual (echo's independent second bit) is
+the **familiar readout limit** — uniform-Hamming kNN extracting one specific bit from a
+multi-feature address amid collisions — *not* a memory failure. The bottleneck, again, is the
+readout, not the memory. _Adversarial verification in progress._
+
+---
+
 ## Appendix — prior-art map (search terms, all bit/discrete, not LLM-specific)
 
 - **Semantic hashing** — learn compact binary codes preserving similarity (the learned "hash").
