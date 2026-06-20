@@ -23,4 +23,5 @@ res_*
 !gated.py
 !window.py
 !multi.py
+!decoder.py
 gv_out/

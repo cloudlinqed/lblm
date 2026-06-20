@@ -789,6 +789,38 @@ readout is fixed.
 
 ---
 
+## 19. Cycle 8 — the learned decoder, and a correction: it was an address collision
+
+We built the learned decoder the §18a verdict asked for — and the investigation **corrected the
+"readout limit" diagnosis itself.**
+
+**(a) A global learned decoder is *worse* than the vote.** A gradient-free perceptron over the
+address (single bits + pairwise ANDs, so it *can* select one bit or combine two) underperforms the
+kNN-vote (K=40, L=8, 8 seeds): echo full **0.38 vs 0.53**; xor full **0.56 vs 0.84**. Reason: a
+*global* linear head is **swamped by the filler positions** (which vastly outnumber the answer
+positions), so it underfits the rare answers — whereas the vote's **locality** (only nearby units
+matter) is its strength. (Implementation: `decoder.py`.)
+
+**(b) The real blocker is an ADDRESS COLLISION, not the readout.** Direct measurement: **160/160**
+answer-bit-2 addresses *also* map to a different target elsewhere in training. The same address must
+emit two different bits → **no readout — vote or decoder — can resolve it.** After the latch
+freezes, the register is identical at every position and the 3-bit window cannot distinguish the
+*answer region* from the *body*. So echo's cap is **address ambiguity**, not extraction — this
+supersedes §18a's "readout limit" framing (the cycle-7 readout-lever probes failed precisely
+because the address itself is ambiguous).
+
+**The fix is address enrichment, not a fancier readout.** A sticky **"boundary-seen" bit** halves
+the collisions (160 → 80); the rest are collisions *within* the post-boundary region, so full
+disambiguation needs a little more — a short **post-boundary step counter**. Then every answer
+position has a unique address and even the plain vote can extract the answer.
+
+**Corrected next step:** extend the recurrent state to track **WHERE we are** (boundary-seen +
+post-boundary position), not to build a smarter decoder. *The latch holds WHAT; the missing piece
+is WHERE.* (And a global readout is the wrong shape regardless — locality/query-conditioning is what
+makes the vote work.)
+
+---
+
 ## Appendix — prior-art map (search terms, all bit/discrete, not LLM-specific)
 
 - **Semantic hashing** — learn compact binary codes preserving similarity (the learned "hash").
