@@ -852,6 +852,25 @@ bottleneck." For this benchmark family that was **wrong**: the real gap was an *
 readout — the decoder was a red herring. (A learned/attention readout may still matter for harder
 tasks, but it was *not* the blocker here.)
 
+### 20a. Verification verdict (cycle 9, 4-agent workflow, high confidence — no correction needed)
+
+- **Task genuinely solved.** echo & xor full = 1.00, bit2 = 1.00 held-out at every L tested (L=4,8
+  over 4 seeds; L=16,24 single-seed).
+- **Deterministic core (strongest evidence):** answer-bit-2 collisions **0/160 at *all* L ∈
+  {4,8,16,24}** for both modes (was 160/160) — seed-independent.
+- **No leakage:** the answer-position address is body-invariant (1 distinct address per class) and
+  the target is never copied into it — under scramble the answer addresses collide 4/4, which is
+  only possible if the address encodes (position, type), not the answer. The latch freezes holding
+  both type bits *before the answer exists* (0 bad over 320 items).
+- **Sound:** the `111` boundary is unique at position `2+L` with **0 violations across 140,800
+  sequences**; train/dev/test are id-disjoint; the mechanism is structurally L-invariant.
+- **One disclosed caveat (not a bug / not leakage):** xor's scramble control sits ~0.44–0.56 (not
+  ~0.25) because xor's full answer has only 2 distinct values, raising the full-match chance
+  baseline; echo's control is clean (~0.17–0.25) and xor's collision-core collapses correctly.
+- **Consolidation follow-ups (recorded, not yet done):** use the collision-core as xor's scramble
+  control; full 16-seed pooled-CI accuracy sweep for L=8/16/24; optional L=32/48 stress + a
+  body-content-disjoint split.
+
 ---
 
 ## Appendix — prior-art map (search terms, all bit/discrete, not LLM-specific)
