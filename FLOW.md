@@ -9,10 +9,20 @@ improve. (For the formal spec see [`ARCHITECTURE.md`](ARCHITECTURE.md); for resu
 > done in discrete bits with a gradient-free learning rule, instead of continuous vectors with
 > backprop.**
 
+**Current design — the whole architecture at a glance:**
+
+![Current design](current_design.png)
+
+*(Green = the memory half, which is solved; red = the readout, the current bottleneck. This is the
+design **as actually built** — it converged away from the early concept; see "vs the early concept"
+at the bottom.)*
+
+**The same flow, lined up against its neural-network twin:**
+
 ![LBLM model flow and its neural-network twin](model_flow.png)
 
-*(The picture above: left = the bit machine, right = the equivalent transformer attention step,
-same-role rows linked; orange = the readout — the part to improve; blue loop = feed the bit back.)*
+*(Left = the bit machine, right = the equivalent transformer attention step, same-role rows linked;
+orange = the readout — the part to improve; blue loop = feed the bit back.)*
 
 ---
 
@@ -194,6 +204,30 @@ flowchart TD
 swap the one blunt "nearest-match vote" for a small learned decoder that can pull *one specific
 bit* out of the held memory. In neural-network terms: the memory half is built; the **attention /
 output half** is where the design has the most room.
+
+---
+
+---
+
+## 7. Current design vs the early concept
+
+The early concept (`early.design.png`, "Hybrid Bit-to-Meaning") was ambitious; the build
+**converged to something simpler and more focused**. Honest mapping:
+
+| Early concept stage | In the current build? |
+|---|---|
+| 1 Raw bit stream | ✅ kept |
+| 2 Local **cellular field** (2-D CA grid, shared update rule) | ❌ dropped → replaced by a 1-D **rolling register** (sliding window) |
+| 3 **Block builder / hierarchy** (bits→bytes→chars→chunks) | ❌ not built |
+| 4 **Addressed memory** (learned semantic addresses) | ✅ **realized** — the core: learned-address content-addressable memory |
+| 5 **Relation graph** (multi-directional: entity/concept/cause/goal) | ❌ dropped as a module → folded into the memory + (future) attention readout |
+| 6 Decoder / output | ✅ realized, but **simplified** to a threshold vote — and it's the current bottleneck |
+| — | ➕ **NEW: the recurrent LATCH** — holds early bits across any gap (the main built result) |
+| — | ➕ **NEW: window compression; gradient-free SOM learning** |
+
+In one line: **the cellular grid, the hierarchy, and the relation graph were not built; the design
+became a sequential register + a recurrent latch + a learned-address memory + a simple readout —
+and we proved the memory half works and the readout half is the open frontier.**
 
 ---
 
