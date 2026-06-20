@@ -642,27 +642,43 @@ because the (window body × latched-state) space the readout must cover grows wi
 only the last `win_keep` window bits** — the latch carries long-range memory, so the address window
 only needs the local structure (boundary + recent outputs); the body bits are dropped.
 
-**Result — window compression solves the attenuation, and is learnable.** The joint dev search
-recovered **`w=[1,0,0,0]`, `win_keep=3`** — both the latch *and* the boundary-width window. Held-out
-(K=40, 6 seeds; intact / scramble / gap):
+**Result — corrected after verification (§17a); my first low-power headline is retracted.** Two
+mechanisms with very different evidential standing:
 
-| L | full window (wk=6) | compressed (wk=3) |
-|---|---|---|
-| 4 | 0.78 / +0.44 | 0.92 / +0.35 |
-| 6 | 0.61 / +0.21 | 0.83 / +0.33 |
-| 8 | 0.64 / +0.20 | 0.92 / +0.42 |
-| 10 | 0.66 / +0.27 | **1.00 / +0.50** |
-| 12 | 0.73 / +0.37 | 0.92 / +0.42 |
+- **The latch is the real, robust win** (cycle 5): `w=[1,0,0,0]` recovered 8/8 on dev, horizon-free
+  *by construction*.
+- **Window compression genuinely helps and genuinely transfers.** A short address window
+  (≈ boundary width) beats the full window on held-out (mean +0.17 across L), and the transfer is
+  real and leakage-proof: the `wk=3` answer-position address provably collapses to **exactly two**
+  body-invariant, type-only addresses (`111` boundary ++ the latched-type bit), so the scramble arm
+  is *structurally forced* to chance. `win_keep=3` is the **mechanistic optimum** (wk2 0.67 / wk3
+  0.92 / wk4 0.64 at L8/12; `wk>3` pulls in body bits and pushes scramble *below* chance — overfit).
 
-The compressed encoder is **~0.9 and flat across L4–L12** (no attenuation) with scramble pinned at
-chance — **length-independent, body-invariant rule transfer.** The latch (cycle 5) removed the
-memory *horizon*; window compression removes the *readout* attenuation; together, **learned from
-data**, the encoder essentially solves the long-range recall task.
+What I first claimed and now **retract** (it was low statistical power — 16 held-out items/seed):
+1. **`win_keep` is NOT reliably learned.** Dev cannot distinguish `win_keep ∈ {2,3,4}` (they tie at
+   the ceiling on the 8-body dev set); the search lands on a noisy tie-break (`wk=3` in only 2/8
+   runs). `win_keep=3` equals this bench's boundary width — a **principle** ("address window =
+   local-structure width: boundary + autoregression"), not a reliably-learned constant.
+2. **Accuracy is NOT flat near 1.0.** It is a **bimodal ~0.5/1.0 mixture** (each split solves or
+   fails), plateauing ~0.79 for L≥8; the "flat ~0.9" was a noisy average (within-L std ~0.25,
+   larger than the L4→L20 change).
+3. **Full-window does NOT clearly attenuate** on re-run (it dips then recovers; net slope ~0). The
+   honest contrast is "compressed *higher* than full", not "compressed flat vs full decaying".
 
-**Caveats:** `win_keep=3` equals the boundary width — the *value* is bench-specific (the address
-window must span the local structure: boundary + autoregression), but the *principle* (latch for
-long-range + minimal window for local) is general. ~0.9 rather than 1.0 at 6 seeds reflects small
-held-out sets / residual. _Adversarial verification in progress._
+### 17a. Verification verdict (cycle 6, 4-agent workflow, high confidence)
+
+- **Latch** — robustly learnable, horizon-free by construction, code-verified. ✓
+- **Window compression** — genuine improvement *and* genuine, leakage-proof transfer (mechanism
+  traced to two type-only addresses; `wk>3` over-fits → sub-chance scramble). ✓
+- **Downgrades** — `win_keep` not reliably learned (noisy tie-break over {2,3,4}); held-out is
+  bimodal ~0.5/1.0 not flat-near-1.0; full-window does not visibly attenuate. **Root cause: low
+  test power** (16 held-out items/seed → near-binary coin flips).
+- **Next — raise test power and re-assess:** pool held-out across many seeds with binomial CIs;
+  report the per-`win_keep` curve with CIs at several L; extend L to 24–32; reconcile the
+  attenuation discrepancy. Lead the story with the latch; present window compression honestly as
+  "narrowing the address to local-structure width beats full-window with scramble-controlled
+  transfer", stating `win_keep=3` is the bench's boundary width (principle, not learned constant).
+  _High-power re-assessment running._
 
 ---
 
