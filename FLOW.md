@@ -9,6 +9,11 @@ improve. (For the formal spec see [`ARCHITECTURE.md`](ARCHITECTURE.md); for resu
 > done in discrete bits with a gradient-free learning rule, instead of continuous vectors with
 > backprop.**
 
+![LBLM model flow and its neural-network twin](model_flow.png)
+
+*(The picture above: left = the bit machine, right = the equivalent transformer attention step,
+same-role rows linked; orange = the readout — the part to improve; blue loop = feed the bit back.)*
+
 ---
 
 ## 1. The loop (zoomed all the way out)
