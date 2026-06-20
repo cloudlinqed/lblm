@@ -25,4 +25,5 @@ res_*
 !multi.py
 !decoder.py
 !region.py
+!parity.py
 gv_out/

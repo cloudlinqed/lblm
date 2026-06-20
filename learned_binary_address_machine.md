@@ -873,6 +873,40 @@ tasks, but it was *not* the blocker here.)
 
 ---
 
+## 21. Cycle 10 — recall vs computation (parity) (`parity.py`)
+
+Evidence-led probe: does *recurrent-state + address + lookup* do **aggregation**, or only recall?
+Task: answer = **parity of all F=6 feature bits**, `[features][111][p,p][000]`. Three recurrent
+states (each + region/position + small window), held-out on **unseen feature patterns** (K=40, 6
+seeds):
+
+| recurrent state | intact | scramble |
+|---|---|---|
+| **accum** (1-bit running XOR, frozen at boundary) | **1.00** | 0.58 |
+| latch — first 2 features | 0.48 | 0.54 |
+| latch — **all 6** features | 0.60 | 0.38 |
+
+**Findings:**
+1. **Computing the aggregate solves it.** A 1-bit running-XOR accumulator (frozen at the boundary) =
+   parity → exactly **2 distinct answer-addresses** → generalises to unseen patterns → 1.00.
+2. **Holding the raw inputs does NOT generalise — even holding *all* of them.** `latch-all-6` (0.60)
+   holds every feature bit, yet lookup can't generalise parity because **parity isn't
+   Hamming-smooth** (flip one input bit → the answer flips, but nearest-neighbour returns the wrong
+   one). `latch-first-2` (0.48) ≈ chance.
+3. ⇒ **The recurrent state must encode the task-relevant *computed* feature, not the raw inputs.**
+   *Recall = hold (latch); computation = accumulate.* The lookup readout is fine either way; the
+   recurrent state is where the task-specific computation must live.
+
+So the framework **does** extend from recall to computation — *provided the right aggregate is
+computed into the address.* This raises (without yet answering) the open frontier: **how to *learn*
+which computation/accumulator a task needs** (here it was hand-built as running-XOR).
+
+*Caveat:* the `[p,p]` 2-value answer makes the scramble baseline ~0.5 (weak control, as with xor);
+the deterministic core is that `accum` yields exactly 2 answer-addresses, so it generalises by
+construction. _Adversarial verification in progress._
+
+---
+
 ## Appendix — prior-art map (search terms, all bit/discrete, not LLM-specific)
 
 - **Semantic hashing** — learn compact binary codes preserving similarity (the learned "hash").
