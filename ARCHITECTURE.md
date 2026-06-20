@@ -50,6 +50,11 @@ Three ways to build the state (`--addr`), and the memory horizon each buys on th
  fold     :  state = rotate(state) XOR (mask if d)  A = R + h   xor-compress  no clean horizon
  learned  :  state = g[state, dropped bit]          A = R + h   LEARNED code  (g hill-climbed;
                                                                 shift/fold are fixed points)
+
+ window compression (win_keep = m):  the register still slides at width R (driving the state),
+ but the ADDRESS keeps only the last m window bits:  address = window[-m:] ++ state  (A = m + h).
+ The latch carries long-range memory, so the address window only needs the local structure
+ (boundary + recent outputs); dropping the body bits stops the readout space growing with length.
 ```
 
 ## 3. A unit, and retrieval

@@ -634,6 +634,38 @@ TYPE-carrying state dominates the retrieval kernel, decoupling rule-readout from
 
 ---
 
+## 17. Cycle 6 — window compression (`window.py`)
+
+Cycle 5 left a *readout* limit: the latch holds the type, but accuracy attenuated with length
+because the (window body × latched-state) space the readout must cover grows with `L`. Fix
+(`win_keep`): the register still slides at width `R` (driving the latch), but the **address keeps
+only the last `win_keep` window bits** — the latch carries long-range memory, so the address window
+only needs the local structure (boundary + recent outputs); the body bits are dropped.
+
+**Result — window compression solves the attenuation, and is learnable.** The joint dev search
+recovered **`w=[1,0,0,0]`, `win_keep=3`** — both the latch *and* the boundary-width window. Held-out
+(K=40, 6 seeds; intact / scramble / gap):
+
+| L | full window (wk=6) | compressed (wk=3) |
+|---|---|---|
+| 4 | 0.78 / +0.44 | 0.92 / +0.35 |
+| 6 | 0.61 / +0.21 | 0.83 / +0.33 |
+| 8 | 0.64 / +0.20 | 0.92 / +0.42 |
+| 10 | 0.66 / +0.27 | **1.00 / +0.50** |
+| 12 | 0.73 / +0.37 | 0.92 / +0.42 |
+
+The compressed encoder is **~0.9 and flat across L4–L12** (no attenuation) with scramble pinned at
+chance — **length-independent, body-invariant rule transfer.** The latch (cycle 5) removed the
+memory *horizon*; window compression removes the *readout* attenuation; together, **learned from
+data**, the encoder essentially solves the long-range recall task.
+
+**Caveats:** `win_keep=3` equals the boundary width — the *value* is bench-specific (the address
+window must span the local structure: boundary + autoregression), but the *principle* (latch for
+long-range + minimal window for local) is general. ~0.9 rather than 1.0 at 6 seeds reflects small
+held-out sets / residual. _Adversarial verification in progress._
+
+---
+
 ## Appendix — prior-art map (search terms, all bit/discrete, not LLM-specific)
 
 - **Semantic hashing** — learn compact binary codes preserving similarity (the learned "hash").

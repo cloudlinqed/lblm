@@ -21,4 +21,5 @@ res_*
 !bench.py
 !encoder.py
 !gated.py
+!window.py
 gv_out/

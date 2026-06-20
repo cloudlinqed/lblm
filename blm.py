@@ -105,13 +105,24 @@ def gated_latch_table(w, h=4):
     return g
 
 
-def make_pairs(stream, R, addr_mode="register", h=0, g=None):
-    """Every step -> (address, next bit). Address carries recurrent history per addr_mode."""
+def addr_of(window, s, win_keep=0):
+    """Build the query address. win_keep>0 keeps only the last win_keep WINDOW bits (window
+    compression): the recurrent state carries long-range memory, so the address window only needs
+    the local structure (boundary + recent outputs); the older body bits are dropped to stop the
+    readout space growing with sequence length."""
+    w = window[-win_keep:] if win_keep else window
+    return tuple(list(w) + list(s))
+
+
+def make_pairs(stream, R, addr_mode="register", h=0, g=None, win_keep=0):
+    """Every step -> (address, next bit). Address carries recurrent history per addr_mode.
+    The register slides at width R (drives the state); win_keep controls how much of it the
+    ADDRESS shows."""
     pairs = []
     s = [0] * h if addr_mode != "register" else []
     for i in range(len(stream) - R):
         window = list(bits(stream[i:i + R]))
-        pairs.append((tuple(window + list(s)), int(stream[i + R])))
+        pairs.append((addr_of(window, s, win_keep), int(stream[i + R])))
         s = fold_state(s, int(stream[i]), addr_mode, h, g)   # the bit leaving as i advances
     return pairs
 
@@ -316,7 +327,7 @@ class Machine:
         s = [0] * p["h"] if p["addr_mode"] != "register" else []
         out = []
         for _ in range(n):
-            b, _ = self._readout(tuple(window + list(s)))
+            b, _ = self._readout(addr_of(window, s, self.p.get("win_keep", 0)))
             out.append(b)
             d = window[0]
             window = window[1:] + [b]
@@ -335,7 +346,7 @@ class Machine:
             s = fold_state(s, d, p["addr_mode"], h, p.get("learned_g"))
         out = []
         for _ in range(n):
-            b, _ = self._readout(tuple(window + list(s)))
+            b, _ = self._readout(addr_of(window, s, self.p.get("win_keep", 0)))
             out.append(b)
             d = window[0]
             window = window[1:] + [b]
@@ -410,10 +421,12 @@ def majority_baseline(r):
 def default_params(args):
     return {
         "mode": args.mode, "R": args.R, "h": args.hist,
-        "addr_mode": args.addr, "A": args.R + (args.hist if args.addr != "register" else 0),
+        "addr_mode": args.addr,
+        "A": (getattr(args, "win_keep", 0) or args.R) + (args.hist if args.addr != "register" else 0),
         "epochs": args.epochs, "seed": args.seed, "beta": args.beta,
         "weight_mode": getattr(args, "weights", "uniform"),
         "weight_learn": getattr(args, "weight_learn", False),
+        "win_keep": getattr(args, "win_keep", 0),
         "prune_to": getattr(args, "prune_to", 0),
         "contrast_radius": getattr(args, "contrast_radius", 3),
         "cond_k": getattr(args, "cond_k", 16),
@@ -446,6 +459,8 @@ def main():
                     help="apply the weights to learning (ranking/allocation), not just readout")
     ap.add_argument("--prune-to", dest="prune_to", type=int, default=0,
                     help="after training, keep only the N strongest units (capacity knob; 0=off)")
+    ap.add_argument("--win-keep", dest="win_keep", type=int, default=0,
+                    help="keep only the last K window bits in the address (window compression; 0=full)")
     ap.add_argument("--contrast-radius", dest="contrast_radius", type=int, default=3)
     ap.add_argument("--cond-k", dest="cond_k", type=int, default=16,
                     help="conditional readout: # nearest units to derive local weights from")
