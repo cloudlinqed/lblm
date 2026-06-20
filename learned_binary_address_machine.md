@@ -754,7 +754,38 @@ the scramble-clean objective; body-disjoint split + per-body rule-scramble contr
 *joint* function of them (XOR) is read out cleanly. The residual (echo's independent second bit) is
 the **familiar readout limit** — uniform-Hamming kNN extracting one specific bit from a
 multi-feature address amid collisions — *not* a memory failure. The bottleneck, again, is the
-readout, not the memory. _Adversarial verification in progress._
+readout, not the memory.
+
+### 18a. Verification verdict (cycle 7, 4-agent workflow, medium confidence)
+
+- **Composition holds in-band and is genuine — with fragility.** `k=2` is CI-separably above `k=1`
+  for both modes (L≤32); `learn_k` recovers `k=2` 5/5 seed-blocks (pooled). Mechanism verified:
+  `multi_latch_table(2,4)` makes **4 distinct injective absorbing states** decoding to `(t1,t2)`,
+  while `k=1` collapses the 4 classes to 2 (holds `t1` only) — structurally unable to do the 2nd bit.
+  *Caveats:* echo's per-seed advantage is marginal (~10/16 wins at L=8); single-split `learn_k` is a
+  coin-flip for echo (reliable recovery needs multi-seed pooling); and **echo collapses at L=48**
+  (`k2=k1=0.44`) — the latch does *not* compose for echo at large gaps.
+- **XOR genuine — confirmed.** 0.938±0.040, scramble *exactly* at chance; leakage structurally
+  impossible (kept window = `[1,1,1]` boundary for all 4 classes; type bits outside the R-window;
+  body shared). The **rule** is genuine at every L, but intact **accuracy decays with L**
+  (0.96→0.92→0.75) — a held-out generalisation cost, not a memory failure.
+- **Echo residual = readout, NOT memory, and NOT fixable by the available levers.** Both bits are
+  provably in the latched state; the 2nd independent bit is the bottleneck (full .65 / bit1 .90 /
+  bit2 .73) because at that step the kept window groups *only* by the just-emitted `t1`
+  (`[1,1,0]` vs `[1,1,1]`), so `t2` must be read from a register sub-bit against a same-window
+  collision. Every readout lever failed (β=8 unchanged; more capacity *worse*; `wk=2/0` worse) —
+  a deeper limit of the frozen-address Hamming-vote readout.
+- **Methodology flags:** results are seed-fragile (xor L8 0.958→0.891 from 12→16 seeds) and
+  **compute-bound** (a single k=2 eval at ep=200 didn't finish a 4-seed pool in 10 min — this is what
+  maxed the CPU). Next runs: cut per-eval cost (lower epochs / cache pooled pairs across seeds),
+  report per-seed win/tie/loss (not only pooled CIs), and lock the echo claim to L≤32.
+
+**Next chapter — the readout.** The latch holds the bits; the gap is *extraction*. Replace the
+single global Hamming-vote with a readout that can separate collinear register sub-bits under an
+identical window — e.g. a per-state / per-window-group calibrated head (a small linear decoder over
+the latched register), or an address transform exposing the register bits as separable dimensions.
+Validate on echo `bit2 | true-bit1` (capped ~0.73). Do *not* chase larger L for echo until the
+readout is fixed.
 
 ---
 
