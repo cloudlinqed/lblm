@@ -24,4 +24,5 @@ res_*
 !window.py
 !multi.py
 !decoder.py
+!region.py
 gv_out/

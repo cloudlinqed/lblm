@@ -821,6 +821,39 @@ makes the vote work.)
 
 ---
 
+## 20. Cycle 9 — region/position latch: the multi-feature task is SOLVED (`region.py`)
+
+Built the region/position latch: **address = [boundary_seen, post-boundary position (3 bits)] ++
+[window-slice] ++ [feature-latch (the type bits)]**. Also fixed a latent bench bug — the body now
+ends in `0` so the `111` boundary is **unambiguous** (a body ending in `1` fused with the boundary
+into an early `111`, which had been aliasing the position counter).
+
+Result (K=40, L=8, **8 seeds pooled**, scramble-controlled):
+
+| mode | baseline (no region) | + region/position latch | scramble |
+|---|---|---|---|
+| echo | 0.72 | **1.00**  (bit2 1.00) | 0.21 |
+| xor | 0.97 | **1.00** | 0.52 |
+
+Answer-bit-2 address collisions: **160/160 → 0/160.**
+
+**The multi-feature recall task is now solved** (echo *and* xor → 1.00, pooled, scramble at chance).
+Once the address encodes **both *what* (feature latch) and *where* (region/position latch)** it is
+collision-free and body-invariant, so the *simple vote* maps it perfectly and generalises to unseen
+bodies.
+
+**Completed lesson chain:** latch (*what*, long-range) → window compression (drop body-noise) →
+multi-latch (several features) → **region/position latch (*where*)** ⇒ the address fully and
+unambiguously encodes the situation, and a plain readout suffices.
+
+**Honest correction to the running theme.** Across cycles I kept concluding "the *readout* is the
+bottleneck." For this benchmark family that was **wrong**: the real gap was an **incomplete address**
+(it encoded *what* but not *where*). Completing the address solved the task with the simplest
+readout — the decoder was a red herring. (A learned/attention readout may still matter for harder
+tasks, but it was *not* the blocker here.)
+
+---
+
 ## Appendix — prior-art map (search terms, all bit/discrete, not LLM-specific)
 
 - **Semantic hashing** — learn compact binary codes preserving similarity (the learned "hash").

@@ -40,13 +40,17 @@ def ans(t1, t2, mode):
 
 
 def gen_body(L, rng):
-    """Shared body: starts [0,0] (so TYPE bits ++ body never make a spurious 111) and no triple-1."""
+    """Shared body: starts [0,0] (so TYPE ++ body never make a spurious 111), no triple-1, and
+    ENDS in 0 (so body ++ boundary never fuse into an early 111 -> the 111 boundary is unique)."""
     body, run = [0, 0], 0
     for _ in range(max(0, L - 2)):
         b = 0 if run >= 2 else rng.randint(0, 1)
         run = run + 1 if b == 1 else 0
         body.append(b)
-    return body[:L]
+    body = body[:L]
+    if L >= 1:
+        body[-1] = 0                      # body ends in 0 -> the boundary 111 is unambiguous
+    return body
 
 
 def dataset(L, K, seed, mode, scramble=False):
