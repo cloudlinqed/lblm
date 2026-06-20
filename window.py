@@ -38,9 +38,12 @@ def evalg(g, h, L, K, seed, tr, te, scr, wk, ep=250, alloc=0):
                if m.generate_primed(it["seq"][:it["ans_start"]], len(it["answer"])) == it["answer"]) / len(tst)
 
 
-def learn(L, K, tr, dev, h=4, C=4, seeds=3):
-    """Jointly learn (write-schedule w, win_keep). Tie-break: prefer latch, fewer writes, smaller
-    window (parsimony)."""
+def learn(L, K, tr, dev, h=4, C=4, seeds=4):
+    """Jointly learn (write-schedule w, win_keep). Selection objective (verified fix): maximise
+    intact WHILE keeping scramble near chance — score = intact - 2*|scramble - 0.5|. Raw intact (or
+    raw scramble-gap) would pick an over-large window that overfits the body (sub-chance scramble);
+    penalising scramble deviation from 0.5 selects the clean, genuinely-transferring win_keep.
+    Needs adequate dev power; tie-break prefers latch / fewer writes / smaller window."""
     best_w, best_wk, best_key = None, None, None
     for wk in (2, 3, 4, 5, 6):
         for bits in itertools.product([0, 1], repeat=C):
@@ -48,7 +51,9 @@ def learn(L, K, tr, dev, h=4, C=4, seeds=3):
             if sum(w) == 0:
                 continue
             g = blm.gated_latch_table(w, h)
-            score = statistics.mean(evalg(g, h, L, K, s, tr, dev, False, wk, ep=150, alloc=1) for s in range(seeds))
+            intact = statistics.mean(evalg(g, h, L, K, s, tr, dev, False, wk, ep=150, alloc=1) for s in range(seeds))
+            scram = statistics.mean(evalg(g, h, L, K, s, tr, dev, True, wk, ep=150, alloc=1) for s in range(seeds))
+            score = intact - 2 * abs(scram - 0.5)      # high intact AND scramble near chance
             key = (round(score, 3), 1 if w[0] else 0, -sum(w), -wk)
             if best_key is None or key > best_key:
                 best_key, best_w, best_wk = key, w, wk
