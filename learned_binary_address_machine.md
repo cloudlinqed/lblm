@@ -903,7 +903,27 @@ which computation/accumulator a task needs** (here it was hand-built as running-
 
 *Caveat:* the `[p,p]` 2-value answer makes the scramble baseline ~0.5 (weak control, as with xor);
 the deterministic core is that `accum` yields exactly 2 answer-addresses, so it generalises by
-construction. _Adversarial verification in progress._
+construction.
+
+### 21a. Verification verdict (cycle 10, 4-agent workflow, high confidence — confirmed & strengthened)
+
+- **accum solves + generalises** parity: **1.00 held-out at F = 6, 8, 10, 12** (no decay).
+  *Deterministic*, not just statistical: at answer positions region+window bits are constant, so the
+  only content-varying address bit *is* the frozen running-XOR = true parity → exactly 2
+  parity-addresses → any unseen pattern collapses onto a seen address → lookup cannot fail (no
+  Hamming-smoothness needed; address space is F-invariant because parity has 2 values).
+- **holding fails even holding ALL inputs:** parity is maximally non-Hamming-smooth (100% of
+  Hamming-distance-1 pattern pairs have opposite parity); nearest-neighbour over the raw held inputs
+  scores 0.73 at F=6 and **0.33 (below chance) at F=8**; latch-6 is no better than latch-2.
+- **sound / leak-free:** `parity_acc` reads only pre-boundary features (poisoning the answer bits
+  leaves it unchanged); the `111` boundary is unique.
+- **METHODOLOGY FIX (applies to earlier cycles too):** `gated.split` is **ID-disjoint, not
+  content-disjoint** — `gen_feats` yields only 24/64 patterns at F=6, so test patterns overlapped
+  train (6/8). The decisive **content-disjoint** control *strengthens* the result: accum 1.00 (gap
+  **+0.65**) while latch-2 (0.31, **−0.27**) and latch-6 (0.21, **−0.40**) go **negative**. Removing
+  the leak leaves accum untouched (as the deterministic argument predicts) and sinks the latches.
+  → **adopt content-disjoint splits + the negative-gap control as the headline** (retire the weak
+  duplicated-bit scramble baseline). Confidence: high.
 
 ---
 
