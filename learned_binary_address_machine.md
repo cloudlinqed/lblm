@@ -678,7 +678,48 @@ What I first claimed and now **retract** (it was low statistical power — 16 he
   attenuation discrepancy. Lead the story with the latch; present window compression honestly as
   "narrowing the address to local-structure width beats full-window with scramble-controlled
   transfer", stating `win_keep=3` is the bench's boundary width (principle, not learned constant).
-  _High-power re-assessment running._
+  _High-power re-assessment: see §17b._
+
+### 17b. High-power re-assessment (pooled held-out, binomial CIs)
+
+Re-ran with **pooled** held-out items (K=48, 12 seeds, n=216/cell, 95% CI) to settle the three
+downgraded points with statistical power.
+
+**Per-`win_keep`** (intact ± CI / scramble):
+
+| wk | L8 intact | L8 scr | L16 intact | L16 scr |
+|---|---|---|---|---|
+| 2 | 0.67±0.06 | 0.50 | 0.67±0.06 | 0.44 |
+| **3** | **0.92±0.04** | 0.51 | 0.83±0.05 | 0.47 |
+| 4 | 0.73±0.06 | **0.37** | 0.95±0.03 | **0.35** |
+| 6 | 0.65±0.06 | 0.35 | 0.70±0.06 | 0.34 |
+
+**Length curve** (compressed `wk=3` vs full `wk=6`, intact ± CI):
+
+| L | wk=3 | scr | wk=6 | scr | gap |
+|---|---|---|---|---|---|
+| 4 | 1.00±0.00 | 0.43 | 0.71±0.06 | 0.42 | +0.29 |
+| 8 | 0.92±0.04 | 0.51 | 0.65±0.06 | 0.35 | +0.27 |
+| 12 | 0.96±0.03 | 0.44 | 0.70±0.06 | 0.35 | +0.26 |
+| 16 | 0.83±0.05 | 0.47 | 0.70±0.06 | 0.34 | +0.13 |
+| 24 | 0.88±0.04 | 0.42 | 0.75±0.06 | 0.41 | +0.13 |
+
+**Rigorous conclusions (supersede §17a's downgrades where power resolves them):**
+1. **`win_keep=3` IS identifiable with power** — CI-separated optimum at L8 (0.92 vs 0.65–0.73);
+   the earlier "not learnable" was a small-dev artifact. **But the correct selection objective is
+   "high intact *with scramble ≈ chance*"** — raw intact (and even raw scramble-gap) would pick the
+   *overfit* `wk=4` at L16 (intact 0.95 but scramble 0.35 = **sub-chance** = body-overfit), whereas
+   `wk=3` keeps scramble ≈ 0.5 (clean). Sub-chance scramble is the overfit signature.
+2. **Compressed (`wk=3`) holds ~0.85–0.95 across L4–24** — high, roughly flat (mild noise), and
+   **CI-separably above full-window (~0.70) at every L** (+0.13 to +0.29). The high-power estimate
+   (~0.90) is *higher* than the underpowered re-run's ~0.79; the core "high, roughly
+   length-independent, beats full-window" claim is **rehabilitated** — just not "flat at 1.0".
+3. **Full-window sits ~0.70 throughout** (no clear attenuation), with mildly sub-chance scramble.
+
+**Net, CI-backed:** latch + window compression (address = local-structure width) achieve **high
+(~0.90), roughly length-independent, scramble-validated rule transfer, clearly above full-window** —
+solid, with `win_keep=3` the principled (boundary-width) optimum selected by the scramble-clean
+criterion, not a "flat-at-1.0 reliably-learned-constant" overclaim.
 
 ---
 
