@@ -952,6 +952,37 @@ _Recorded; not yet adversarially verified (paused new runs at the user's request
 
 ---
 
+## 23. Cycle 12 — LEARN the recurrent computation (the central question) (`learn_state.py`)
+
+Every prior cycle had *me* hand-picking the recurrent state per task. This one tests whether the
+machine can **learn which computation a task needs.** A structured family —
+`hold-k` (latch the first k bits) and `count-m` (running popcount mod m, frozen at the boundary) —
+plus a meta-learner that picks the member generalising best on a **content-disjoint dev set**,
+tie-broken toward **fewest state bits** (the simplest computation).
+
+Result (held-out, 1 seed):
+
+| task | LEARNED | expected | test acc | dev signal |
+|---|---|---|---|---|
+| recall (echo) | **hold-2** | hold-2 | 1.00 | hold2=1.00, hold3=1.00, count*≤0.44 |
+| parity (mod 2) | **count-2** | count-2 | 1.00 | count2=1.00, count4=1.00, hold*≤0.44 |
+| popcount mod 4 | **count-4** | count-4 | 1.00 | count4=1.00, count3=0.81, count2=0.62, hold*≤0.38 |
+
+**The machine recovers the right recurrent computation from data — without being told:** the latch
+for recall, running-XOR (`count-2`) for parity, the mod-4 counter for mod-4, each at 1.00 held-out.
+The parsimony tie-break recovers the **minimal** correct computation (`hold-2` not `hold-3`;
+`count-2` not `count-4` for parity — `count-4` also solves parity but is over-complex). This converts
+*"I hand-engineer a solver per task"* into *"the machine selects the right computation from data."*
+
+**Honest scope:** this is **selection over a small, hand-defined structured family** (`{hold, count}`),
+*not* learning an arbitrary computation from scratch. That is the practical/principled form (cf.
+cycles 4–5: structured families are learnable; free tables overfit) — a library of structured
+primitives + data-driven selection. Open extension: grow the family / learn the members themselves.
+
+_1 seed; not yet adversarially verified._
+
+---
+
 ## Appendix — prior-art map (search terms, all bit/discrete, not LLM-specific)
 
 - **Semantic hashing** — learn compact binary codes preserving similarity (the learned "hash").

@@ -27,4 +27,5 @@ res_*
 !region.py
 !parity.py
 !aggregate.py
+!learn_state.py
 gv_out/
