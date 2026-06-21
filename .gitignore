@@ -34,5 +34,8 @@ res_*
 !mdp.py
 !scale.py
 !represent.py
+!mix.py
+!mix_sse.py
+!two_layer_mix.py
 data/
 gv_out/

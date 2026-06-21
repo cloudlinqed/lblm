@@ -1217,6 +1217,46 @@ candidate pool (periods + lags); a real but still bounded search; ≤ 120 KB, on
 
 ---
 
+## 30. Push the compressor — online logistic context mixing (`mix.py`, `mix_sse.py`, `two_layer_mix.py`)
+
+The scaled core's predictor, improved from count-backoff (§28) to **online logistic context mixing** —
+the lpaq/PAQ idea, and exactly the framing's "neural-network mapping" in bit-native form: several
+byte-aware context models each vote a probability for the next bit; a single **online-trained
+logistic unit** mixes them in the logit (stretch/squash) domain; the mixed P codes the bit; weights +
+counts update online. Adaptive over the whole stream (like gzip on the whole file). Metric = bits/bit
+(= compression; raw = 1.0000).
+
+Results (300 KB cap, **whole-stream / last-20%**; self-run and adversarially verified):
+
+| model | prose | code |
+|---|---|---|
+| _gzip (whole file)_ | _0.3585_ | _0.2386_ |
+| `mix.py` logistic mixing (orders 0–4) | 0.2636 / 0.2398 | 0.2269 / 0.1890 |
+| `two_layer_mix.py` (mixer-set + SSE) | **0.2400** / 0.2158 | 0.1962 / 0.1582 |
+| `mix_sse.py` (SSE/APM + match + orders 0–6) | 0.2411 / 0.2167 | **0.1878 / 0.1473** |
+
+- All three **beat gzip** on both prose and code; the mixer compresses real prose to ~24 % and code
+  to ~19 %.
+- Best per corpus: `two_layer_mix` on prose (0.2400), `mix_sse` on code (0.1878; last-20 % 0.1473).
+
+**Verification (multi-agent workflow — 2 independent skeptics + judge):** `mix.py` is **sound and
+leakage-free** — causality proven three ways (count-invariant assertion c0+c1 ≤ i; future-bit-flip
+invariance; from-scratch re-implementation matching to 4 decimals); the metric is a correct mean
+−log₂ P(true bit) (a constant-0.5 predictor = exactly 1.0000); single-thread, stdlib only. Both
+challengers were verified causal (future-flip test) and reproduce their numbers.
+
+**Honest scope:** bits/bit depends on the byte budget (longer stream → lower, an online-adaptation
+effect, not leakage): `mix.py` is 0.2636/0.2269 at 300 KB but 0.2743/0.2351 at 200 KB. gzip is a
+standard but **weak** baseline; strong compressors (PAQ/cmix) reach far lower. This is "the bit-native
+core, with a neural mixer, is a real compressor that beats gzip," not state of the art. ≤ 300 KB, one
+prose + one code corpus.
+
+**Next:** merge the two winners — `two_layer_mix`'s per-context mixer-set + cascaded SSE (carries
+prose) with `mix_sse`'s byte-level match model + order-5/6 contexts (carries code) — into one model to
+beat both per-corpus bests at once.
+
+---
+
 ## Appendix — prior-art map (search terms, all bit/discrete, not LLM-specific)
 
 - **Semantic hashing** — learn compact binary codes preserving similarity (the learned "hash").
