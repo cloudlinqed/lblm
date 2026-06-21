@@ -536,8 +536,9 @@ bit-address — scale, stochastic dynamics, and function approximation remain op
 
 > **Compressor update.** The core's predictor, scaled to **online logistic context mixing** (a
 > one-neuron neural mixer over byte-context models — the framing's NN mapping in bit-native form),
-> beats gzip on real prose **and** code (≈0.24 / 0.19 bits/bit vs gzip 0.36 / 0.24), and is verified
-> **leakage-free** by independent adversarial agents (causality proven by count assertions + a
-> future-bit-flip test + an independent re-implementation). gzip is a weak baseline — this is "a real
-> compressor that beats gzip," not state of the art.
+> beats gzip on real prose **and** code. A single merged model (`mixmax.py`) reaches ≈0.24 / 0.18
+> bits/bit (vs gzip 0.36 / 0.24), best on both corpora at once, and is verified **leakage-free** —
+> independent adversarial agents plus a built-in future-bit-flip causality test (flipping a future bit
+> leaves every past prediction bit-identical). gzip is a weak baseline — this is "a real compressor
+> that beats gzip," not state of the art.
 

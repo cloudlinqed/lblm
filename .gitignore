@@ -37,5 +37,6 @@ res_*
 !mix.py
 !mix_sse.py
 !two_layer_mix.py
+!mixmax.py
 data/
 gv_out/

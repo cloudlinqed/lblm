@@ -1233,11 +1233,16 @@ Results (300 KB cap, **whole-stream / last-20%**; self-run and adversarially ver
 | _gzip (whole file)_ | _0.3585_ | _0.2386_ |
 | `mix.py` logistic mixing (orders 0–4) | 0.2636 / 0.2398 | 0.2269 / 0.1890 |
 | `two_layer_mix.py` (mixer-set + SSE) | **0.2400** / 0.2158 | 0.1962 / 0.1582 |
-| `mix_sse.py` (SSE/APM + match + orders 0–6) | 0.2411 / 0.2167 | **0.1878 / 0.1473** |
+| `mix_sse.py` (SSE/APM + match + orders 0–6) | 0.2411 / 0.2167 | 0.1878 / 0.1473 |
+| **`mixmax.py` (merge — best of both)** | **0.2392 / 0.2163** | **0.1835 / 0.1460** |
 
-- All three **beat gzip** on both prose and code; the mixer compresses real prose to ~24 % and code
-  to ~19 %.
-- Best per corpus: `two_layer_mix` on prose (0.2400), `mix_sse` on code (0.1878; last-20 % 0.1473).
+- All four **beat gzip** on both prose and code; the merged model compresses real prose to ~24 % and
+  code to ~18 %.
+- **The merge `mixmax.py` wins both corpora at once** — prose 0.2392 (< two_layer 0.2400) and code
+  0.1835 (< mix_sse 0.1878) — combining `two_layer_mix`'s global + final-layer mixers with `mix_sse`'s
+  byte-level match model and order-5/6 contexts. **Verified leakage-free** by a built-in future-bit-flip
+  causality self-test (`python mixmax.py flip`: flipping a future bit leaves every past prediction
+  bit-identical, while later predictions do change).
 
 **Verification (multi-agent workflow — 2 independent skeptics + judge):** `mix.py` is **sound and
 leakage-free** — causality proven three ways (count-invariant assertion c0+c1 ≤ i; future-bit-flip
@@ -1251,9 +1256,9 @@ standard but **weak** baseline; strong compressors (PAQ/cmix) reach far lower. T
 core, with a neural mixer, is a real compressor that beats gzip," not state of the art. ≤ 300 KB, one
 prose + one code corpus.
 
-**Next:** merge the two winners — `two_layer_mix`'s per-context mixer-set + cascaded SSE (carries
-prose) with `mix_sse`'s byte-level match model + order-5/6 contexts (carries code) — into one model to
-beat both per-corpus bests at once.
+**Next:** the road to *strong* compressors — CTW-style context mixing, larger / more diverse corpora,
+longer context + match models, adaptive count decay for non-stationarity — or apply the same
+predictor to a different modality through a dumb adapter.
 
 ---
 
