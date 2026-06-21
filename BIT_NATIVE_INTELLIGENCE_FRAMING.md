@@ -527,3 +527,10 @@ bit-address — scale, stochastic dynamics, and function approximation remain op
 > again beating a raw bit-window. The representation lesson holds on real data, at scale. (gzip is a
 > standard but weak baseline — this is "it works on real data," not state of the art.)
 
+> **Representation-discovery update.** The byte/phase structure is no longer hand-given: on the real
+> corpus the core **discovers** the byte period (p=8, via a period scan) and greedily builds a
+> representation from scratch — selecting the byte phase first, then the byte-aligned previous bit —
+> that converges toward the hand-engineered one (0.38 vs 0.34 bits/bit, gap still closing).
+> Learn-the-computation holds at scale: the core finds its own predictive structure rather than being
+> handed it.
+

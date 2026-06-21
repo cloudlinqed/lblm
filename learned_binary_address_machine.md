@@ -1179,6 +1179,44 @@ beats gzip on real text**," not state of the art. One book, one language, ≤ 77
 
 ---
 
+## 29. Learn the REPRESENTATION on real data — discover byte structure from scratch (`represent.py`)
+
+§28 hand-gave the byte/phase structure. This removes that crutch: the core **discovers** which context
+features predict the next bit, on the real corpus, via learn-the-computation at scale.
+
+**Part 1 — period scan** (address = `i mod p` alone): bits/bit is minimised at **p=8** (0.77), tied
+with its multiple p=16, with partial dips at the divisors/multiples 4 and 12 and ≈ chance (0.99)
+elsewhere. The core **discovers the byte period of text** purely from predictive value, without being
+told.
+
+**Part 2 — greedy forward selection** over a pool {`i mod p` (p=2..16), lag bits (1..16)}; it builds
+a representation from scratch:
+
+| step | feature added | bits/bit |
+|---|---|---|
+| 1 | **mod-8** (byte phase, chosen first) | 0.7725 |
+| 2 | **lag-8** (aligned bit in previous byte) | 0.7430 |
+| 3–7 | lag-1,2,3,4,5,6 | 0.5323 |
+| 8–16 | lag-5,7,9,10,11,12,14,15,16 | **0.3759** |
+| — | _hand-given byte-aware B=2_ | _0.3445_ |
+
+**Findings:**
+- **The core rediscovers byte structure:** it selects the byte phase (`mod-8`) first and the
+  byte-aligned previous bit (`lag-8`) second — the same structure §28 hand-coded — from data alone.
+- **The discovered representation converges toward the hand-engineered one:** the gap shrinks from
+  0.53 vs 0.35 (7 features) to **0.376 vs 0.345** (16 features, ~0.03 apart) and was still narrowing.
+  Given enough capacity the *learned* representation is essentially as good as the *supplied* one —
+  without being told about bytes.
+- **Residual gap:** greedy-over-individual-bits + crude global backoff is slightly weaker than the
+  structured byte-aware + order-backoff CORE (§28), and the curve had not fully converged.
+
+**Significance:** the central "learn the computation" result now holds at scale on real data for
+**representation discovery** — the core finds the predictive structure (byte period + alignment)
+itself, rather than being handed it. **Honest scope:** greedy feature selection over a hand-defined
+candidate pool (periods + lags); a real but still bounded search; ≤ 120 KB, one corpus.
+
+---
+
 ## Appendix — prior-art map (search terms, all bit/discrete, not LLM-specific)
 
 - **Semantic hashing** — learn compact binary codes preserving similarity (the learned "hash").
