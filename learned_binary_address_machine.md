@@ -927,6 +927,31 @@ construction.
 
 ---
 
+## 22. Cycle 11 — compute-vs-hold holds for a non-degenerate aggregate (`aggregate.py`)
+
+Extends cycle 10 from parity (2 values) to **popcount mod 4** (4 values), using the
+**content-disjoint** split (the cycle-10 methodology fix). Held-out, 5 seeds (chance = 0.25):
+
+| F | accum (running mod-4 counter) | latch-all (holds every input) | #patterns |
+|---|---|---|---|
+| 6 | **1.00** (scr 0.46) | 0.14 (scr 0.37) | 24 |
+| 8 | **1.00** (scr 0.26) | 0.15 | 81 |
+| 10 | **1.00** (scr 0.22) | 0.18 | 274 |
+
+- **accum (running mod-4 counter, frozen at the boundary) solves + generalises, F-invariantly.**
+  The answer-address space is the **4 aggregate values, not 2^F**, so unseen patterns collapse onto
+  the 4 seen addresses → generalisation by construction; scramble → ~0.25 as the content-leak
+  shrinks with more patterns (the content-disjoint control is clean here).
+- **latch-all FAILS (≤ chance, 0.14–0.18)** even holding every input — a non-Hamming-smooth
+  aggregate can't be generalised by lookup over raw inputs.
+- ⇒ The **compute-vs-hold** principle holds beyond the degenerate 2-value case: the recurrent state
+  must *compute* the task aggregate (here a running mod-m counter); the address space then scales
+  with the **number of aggregate values (m)**, not the input count — hence F-invariant.
+
+_Recorded; not yet adversarially verified (paused new runs at the user's request)._
+
+---
+
 ## Appendix — prior-art map (search terms, all bit/discrete, not LLM-specific)
 
 - **Semantic hashing** — learn compact binary codes preserving similarity (the learned "hash").

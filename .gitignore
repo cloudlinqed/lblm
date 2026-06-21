@@ -26,4 +26,5 @@ res_*
 !decoder.py
 !region.py
 !parity.py
+!aggregate.py
 gv_out/
