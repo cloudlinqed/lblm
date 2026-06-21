@@ -1090,6 +1090,42 @@ the learned address; not yet sequential/multi-step planning or non-stationary en
 
 ---
 
+## 27. Cycle 15 — SEQUENTIAL / multi-step action: a bit-native MDP with delayed reward (`mdp.py`)
+
+Extends cycle 14 from a single-step bandit to a real **MDP**: navigate a 1-D corridor (P=8) to a goal
+shown once at the start; the reward arrives **only at the final step**. Solved by tabular **TD
+Q-learning** over a learned bit-address. Tests temporal credit assignment + memory across the horizon
++ the representation lesson, in sequence.
+
+| representation | train reward | held-out reward | #states |
+|---|---|---|---|
+| `rel` = (sign(goal−pos), step) — **computed** relative direction | 1.00 | **1.00** | 21 |
+| `abs` = (pos, goal, step) — raw absolute | 0.50 | **0.00** | 134 |
+| `nomem` = (pos, step) — no goal memory | 0.25 | **0.00** | 35 |
+
+`rel` learning curve (reaches-goal rate, delayed reward): **0.13 → 0.82** over training (greedy eval
+= 1.00; chance ≈ 0.12).
+
+**Findings:**
+- **Credit assignment works:** with only a terminal reward, TD backup over the learned bit-address
+  lifts the policy from chance (0.13) to optimal (1.00 greedy) — sequential, multi-step.
+- **Memory across the horizon is required:** `nomem` (no goal memory) fails (0.25 / 0.00).
+- **The representation lesson carries to sequential control:** the *computed* relative-direction
+  state (21 states) generalises to held-out goals (1.00); the *raw* absolute state (134 states)
+  memorises and collapses on held-out goals (0.00). Same lesson as cycles 11 / 14 / data-scaling
+  (§25), now for RL.
+- **Learn-the-computation extends to RL:** selecting the representation by held-out reward recovers
+  `rel`.
+
+**Significance:** the bit-native core is now a *sequential decision-maker* — delayed-reward credit
+assignment over a horizon, with the right *computed* representation giving generalisation.
+
+**Honest scope:** small tabular MDP (P=8, H=8, 3 actions), single deterministic corridor, hand-given
+representation candidates; not yet function approximation at scale, stochastic dynamics, or long
+horizons. 1 seed.
+
+---
+
 ## Appendix — prior-art map (search terms, all bit/discrete, not LLM-specific)
 
 - **Semantic hashing** — learn compact binary codes preserving similarity (the learned "hash").

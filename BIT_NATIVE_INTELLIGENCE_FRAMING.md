@@ -509,9 +509,15 @@ ten criteria of §7. Each criterion now has a **bit-native demonstration** on sy
 **What this is — and is not (cf. §13).** These are **mechanism demonstrations at small scale on
 synthetic bit-streams**, not general intelligence. Every criterion is shown to *work in isolation or
 small combination*; the open problems are **scale** (large/diverse streams), **deeper composition**
-(many primitives, control flow), **sequential multi-step action** (the current action result is a
-single-step contextual bandit), **non-stationarity** (rules that change mid-stream), and **real
-modalities** through the dumb adapters. The thesis — *intelligence can live below language, in a
-bit-native memory / abstraction / action core* — is **supported in mechanism**, not yet proven at
-scale.
+(many primitives, control flow), **scaled / long-horizon / stochastic sequential control** (cycle 15
+demonstrates short-horizon multi-step action with delayed-reward credit assignment over a learned
+bit-address — scale, stochastic dynamics, and function approximation remain open), **non-stationarity**
+(rules that change mid-stream), and **real modalities** through the dumb adapters. The thesis —
+*intelligence can live below language, in a bit-native memory / abstraction / action core* — is
+**supported in mechanism**, not yet proven at scale.
+
+> **Sequential update (cycle 15).** The action result is no longer a single-step bandit: a bit-native
+> MDP with reward only at the final step is solved by TD learning over the learned address, and the
+> *computed* relative-direction representation generalises to held-out goals (1.00) while raw/absolute
+> memorises and fails (0.00) — the representation lesson holds in reinforcement learning too.
 

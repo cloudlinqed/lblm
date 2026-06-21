@@ -31,4 +31,5 @@ res_*
 !compose.py
 !datascale.py
 !action.py
+!mdp.py
 gv_out/
