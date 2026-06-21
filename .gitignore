@@ -39,5 +39,6 @@ res_*
 !two_layer_mix.py
 !mixmax.py
 !stream.py
+!mixns.py
 data/
 gv_out/
