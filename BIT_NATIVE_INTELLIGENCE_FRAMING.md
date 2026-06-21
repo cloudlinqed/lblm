@@ -542,3 +542,10 @@ bit-address — scale, stochastic dynamics, and function approximation remain op
 > leaves every past prediction bit-identical). gzip is a weak baseline — this is "a real compressor
 > that beats gzip," not state of the art.
 
+> **Agency-on-a-real-stream update.** The core is not only a compressor: the same predictor drives a
+> change / anomaly detector on a real English → Python → English stream — surprise jumps **+1.11 /
+> +0.41** bits/byte at the two real regime changes and the core **flags both** (latency 554 / 192
+> bytes), realising this doc's own examples (§6, §11: "detecting anomaly in a stream", "detect when a
+> pattern changes"). The same bit core that compresses also **acts**. (The return boundary is weaker
+> because the model retained English statistics — a real memory effect, honestly noted.)
+

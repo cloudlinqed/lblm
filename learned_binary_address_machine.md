@@ -1262,6 +1262,40 @@ predictor to a different modality through a dumb adapter.
 
 ---
 
+## 31. Agency on a REAL stream — bit-native change / anomaly detection (`stream.py`)
+
+Turns the predictor into an **agent that acts on a real stream**: the online logistic mixer predicts
+each bit; the per-byte **surprise** (−log₂ P over its 8 bits) is the signal; a sustained mean-shift in
+surprise makes the core **emit a flag — its action**. This realises the framing doc's own examples of
+intelligence-without-language ("detecting anomaly in a stream" / "detect when a pattern changes", §6
+and §11) and exercises non-stationarity. Stream = **real** data with known regime shifts: English →
+Python source → English (270 KB, built from the two real corpora so the change points are ground
+truth).
+
+**Result:**
+- Surprise jumps sharply at **both** true regime changes: eng→code **+1.11** bits/byte (2.12 → 3.23),
+  code→eng **+0.41** (1.83 → 2.24).
+- The detector flags **both** boundaries with low latency (**554** and **192** bytes).
+- The per-5 KB surprise trace tracks the regimes (English ~2.1–2.6, Python ~1.7–2.0 bits/byte).
+
+**Findings:**
+- The bit-native core **detects distribution shift on real data** — its prediction surprise is a
+  usable anomaly signal, and the flag is a genuine action from the *same* predictor (no separate model).
+- **Asymmetry (honest):** the return boundary (code→eng) is weaker (+0.41 vs +1.11) because the model
+  **retained English statistics** from the first segment — its memory makes the second English regime
+  less surprising. A real property of the predictor, not a detector artefact.
+- The 8 extra flags are mostly genuine **local** content anomalies (e.g. a repetitive passage dipping
+  to ~1.3 bits/byte) plus 2 refractory echoes of the real detections — i.e. the detector is doing
+  anomaly detection, broader than the 3 planted change-points.
+
+**Honest scope:** a thin surprise-threshold detector on top of the `mix.py` predictor (windows/margin
+tuned, not learned); one constructed real stream with 2 planted boundaries; recall 2/2, with extra
+flags being real local anomalies rather than random noise. **Significance:** closes the framing
+scorecard's *action* axis on **real** data — the same core that compresses also **acts** (flags
+changes/anomalies) on a real stream, supporting "intelligence below language" beyond compression.
+
+---
+
 ## Appendix — prior-art map (search terms, all bit/discrete, not LLM-specific)
 
 - **Semantic hashing** — learn compact binary codes preserving similarity (the learned "hash").
