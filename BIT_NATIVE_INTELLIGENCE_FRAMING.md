@@ -489,7 +489,7 @@ ten criteria of §7. Each criterion now has a **bit-native demonstration** on sy
 | 1 | build useful internal state from raw signals | ✅ | latch / accumulator (9–11) |
 | 2 | remember across long gaps | ✅ | horizon-free latch (9) |
 | 3 | match current state to prior experience | ✅ | content-addressable memory + Hamming vote |
-| 4 | predict what happens next | ✅ | next-bit beats the scramble control |
+| 4 | predict what happens next | ✅ | next-bit beats scramble; real-text compression beats gzip (scale) |
 | 5 | choose useful next actions | ✅ | reward-driven policy (14) |
 | 6 | compress repeated patterns | ✅ | window compression `win_keep` (6) |
 | 7 | generalize across similar states | ✅ | 1.00 held-out, content-disjoint |
@@ -520,4 +520,10 @@ bit-address — scale, stochastic dynamics, and function approximation remain op
 > MDP with reward only at the final step is solved by TD learning over the learned address, and the
 > *computed* relative-direction representation generalises to held-out goals (1.00) while raw/absolute
 > memorises and fails (0.00) — the representation lesson holds in reinforcement learning too.
+
+> **Real-data update (scale).** The core is no longer only a toy-bench predictor: as a next-bit
+> predictor on a real 300–772 KB English corpus it reaches **0.27 bits/bit** (compresses real text to
+> ~27 %) and **beats gzip (0.36)** on held-out data, with the *computed* byte-aware representation
+> again beating a raw bit-window. The representation lesson holds on real data, at scale. (gzip is a
+> standard but weak baseline — this is "it works on real data," not state of the art.)
 

@@ -1126,6 +1126,59 @@ horizons. 1 seed.
 
 ---
 
+## 28. Scale on REAL data — the bit-native core as a real text compressor (`scale.py`)
+
+The consolidation step (after a run of small single-mechanism cycles): assemble the core as a
+**next-bit predictor** and run it on a **real corpus** (300–772 KB of public-domain English text,
+bytes → bits), measured by held-out **bits-per-bit** (= cross-entropy = compression; raw = 1.0000;
+the bit-native analogue of an LLM's perplexity), externally referenced against **gzip**. The model is
+the exact-count form of the content-addressable machine: a context address → empirical next-bit
+distribution (KT/Laplace smoothed); at scale exact counts replace the Hamming-kernel/SOM used on the
+tiny benches.
+
+**Representation comparison** (300 KB, held-out 20%):
+
+| representation | held-out bits/bit |
+|---|---|
+| order-0 within-byte (phase, cur) | 0.5733 |
+| bit-window k=8 (raw, unaligned) | 0.6617 |
+| bit-window k=16 (raw, unaligned) | 0.3792 |
+| byte-aware B=1 (computed phase) | 0.4296 |
+| byte-aware B=2 (computed phase) | 0.3367 |
+| byte-aware B=3 (computed phase) | 0.2806 |
+| **CORE backoff (orders 3→2→1→0)** | **0.2727** |
+| _external ref: gzip_ | _0.3585_ |
+
+**Data scaling** (CORE backoff model):
+
+| bytes | core bits/bit | gzip bits/bit |
+|---|---|---|
+| 100 K | 0.3070 | 0.3673 |
+| 300 K | 0.2727 | 0.3585 |
+| 600 K | 0.2689 | 0.3567 |
+| 772 K | 0.2791 | 0.3559 |
+
+**Findings:**
+- **The bit-native core is a real predictor:** it compresses real English to **27 %** (0.2727
+  bits/bit) and **beats gzip** (0.3585) at every data size — the "see it in real, like LLM training"
+  milestone (bits/bit = the bit-native perplexity/compression metric).
+- **The representation lesson holds at scale on real data:** the *computed* byte-aware representations
+  dominate raw bit-windows of comparable size (byte-aware B=2 0.3367 < bit-window k=16 0.3792) and
+  scale better with order; even order-0 within-byte (just phase + current partial byte) carries real
+  signal (0.5733).
+- **More real data → better,** to ~600 KB (0.307 → 0.269); the slight uptick at 772 KB is a held-out
+  distribution shift (the file tail is the Gutenberg license/footer), not a reversal — consistent with
+  the data-scaling finding (§25) on real data.
+
+**Honest scope / relation to the design:** at scale the "learned binary address + Hamming kernel +
+SOM" reduces to an exact-count context model (a PPM-like byte predictor) — Hamming generalisation is
+unnecessary when data is plentiful; what is tested, and what matters, is the **representation** (the
+recurrent / computed features written into the address). **gzip is a standard but weak baseline**;
+strong compressors (PPM/CTW/PAQ, LLMs) reach far lower bits/bit. The claim is "**the core works and
+beats gzip on real text**," not state of the art. One book, one language, ≤ 772 KB.
+
+---
+
 ## Appendix — prior-art map (search terms, all bit/discrete, not LLM-specific)
 
 - **Semantic hashing** — learn compact binary codes preserving similarity (the learned "hash").

@@ -32,4 +32,6 @@ res_*
 !datascale.py
 !action.py
 !mdp.py
+!scale.py
+data/
 gv_out/
