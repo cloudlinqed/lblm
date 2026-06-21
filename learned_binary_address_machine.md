@@ -1013,6 +1013,45 @@ mechanistically transparent (singles can't, the right pairs can, parsimony picks
 
 ---
 
+## 25. Methodology — does more data help? data scaling vs representation (`datascale.py`)
+
+Question raised mid-research: would increasing the dev set / training on larger data help? Two
+learning curves on popcount mod 4 (F=10, content-disjoint split) separate the two failure modes.
+
+**Curve 1 — SELECTION vs DEV size (statistical axis):**
+
+| dev items | P(pick count-4) | test acc of pick |
+|---|---|---|
+| 2 | 0.43 | 0.80 |
+| 4 | 0.63 | 0.88 |
+| 8 | 0.90 | 0.98 |
+| 16 | 1.00 | 1.00 |
+| 54 | 1.00 | 1.00 |
+
+More dev data **fixes selection**: a tiny dev mis-picks (overfits) 57% of the time; at ≥16 dev items
+it reliably recovers `count-4` (1.00). → increasing the dev set is the principled lever to make a
+*freer* search safe.
+
+**Curve 2 — TEST acc vs TRAIN size (representational axis):**
+
+| train items | raw-input (hold-all) | structured count-4 |
+|---|---|---|
+| 41 | 0.33 | 0.33 |
+| 83 | 0.17 | 0.56 |
+| 166 | 0.02 | 1.00 |
+
+More training data only helps the **right** representation (`count-4` → 1.00). It makes the **wrong**
+one *worse* (raw-input 0.33 → 0.02): with a non-Hamming-smooth target and a Hamming-retrieval
+readout, more data sharpens confidently-wrong interpolation from mis-aggregated neighbours.
+
+**Bottom line:** data scaling helps the **search** (reliable selection of the computation) but cannot
+substitute for the right **representation** — it amplifies whatever representation you chose, for
+better or worse. So "just train on more data" is **not** a substitute for the primitive library; they
+are complementary — more dev → reliable selection; the library → the representations to select among;
+more train → pays off only once the representation is right.
+
+---
+
 ## Appendix — prior-art map (search terms, all bit/discrete, not LLM-specific)
 
 - **Semantic hashing** — learn compact binary codes preserving similarity (the learned "hash").

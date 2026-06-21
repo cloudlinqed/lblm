@@ -29,4 +29,5 @@ res_*
 !aggregate.py
 !learn_state.py
 !compose.py
+!datascale.py
 gv_out/
