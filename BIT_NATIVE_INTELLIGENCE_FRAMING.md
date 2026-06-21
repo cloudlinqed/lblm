@@ -549,3 +549,10 @@ bit-address — scale, stochastic dynamics, and function approximation remain op
 > pattern changes"). The same bit core that compresses also **acts**. (The return boundary is weaker
 > because the model retained English statistics — a real memory effect, honestly noted.)
 
+> **Strong-compressor update.** A 4-way parallel push (CTW, multi-match, deep SSE, non-stationarity)
+> over the merged model yielded only **modest, sub-additive** gains; the winner `mixns` reaches
+> ~0.236 / 0.181 bits/bit (prose / code), verified causal. The key finding: **more data buys ~10× the
+> improvement of more shallow tricks** (prose 0.264→0.227 from 100 K→500 K vs ~0.003 from the best
+> trick). Shallow modelling has hit diminishing returns — **scale and deeper modelling are the
+> lever**, mirroring how LLMs are scaled.
+

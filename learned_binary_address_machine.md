@@ -1296,6 +1296,44 @@ changes/anomalies) on a real stream, supporting "intelligence below language" be
 
 ---
 
+## 32. Toward STRONG compressors — four techniques, and the real lever (`mixns.py`)
+
+A 4-way parallel push (adversarial multi-agent workflow) added four advancements on top of `mixmax`,
+each benched on prose + code (200 KB) and causality-self-tested:
+
+| technique | prose | code | Δ vs mixmax |
+|---|---|---|---|
+| `mixmax` (base) | 0.2495 | 0.1922 | — |
+| **`mixns`** (recency count-halving + RMSProp mixer LR + hashed orders 8/12/16) | **0.2465** | **0.1891** | −0.003 |
+| `deep_sse` (5-APM calibration chain) | 0.2481 | 0.1913 | −0.001 |
+| `mixctw` (binary CTW input) | 0.2482 | 0.1911 | −0.001 |
+| `multimatch` (run-length + multi-hash) | 0.2495 | 0.1918 | ~0 |
+
+All four are **verified causal** (future-bit-flip self-test) and independently re-measured; `mixns`
+wins both. The techniques are **sub-additive** (they attack overlapping high-order signal), so stacking
+all four is only ≈0.244/0.187 — diminishing returns.
+
+`mixns` verified at 300 KB: **prose 0.2364 / code 0.1806** (causal), vs gzip 0.3585 / 0.2386.
+
+**The real lever is data, not more tricks.** `mixns` prose whole-stream by corpus size:
+
+| bytes | bits/bit |
+|---|---|
+| 100 K | 0.2638 |
+| 300 K | 0.2364 |
+| 500 K | 0.2269 |
+
+More data bought **≈0.037** (100 K→500 K) — an order of magnitude more than the ≈0.003 from the best
+shallow trick.
+
+**Conclusion:** shallow modelling tricks have hit diminishing returns; reaching PPM/PAQ territory
+needs **scale** (more / diverse data) and deeper modelling, not more shallow mixer inputs. `mixns` is
+the current strongest single model and is verified leakage-free. **Honest scope:** gzip is a weak
+baseline; absolute bits/bit (~0.18–0.24) is still well above strong compressors; single-corpus,
+≤ 500 KB.
+
+---
+
 ## Appendix — prior-art map (search terms, all bit/discrete, not LLM-specific)
 
 - **Semantic hashing** — learn compact binary codes preserving similarity (the learned "hash").
