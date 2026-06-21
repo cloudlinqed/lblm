@@ -1334,6 +1334,34 @@ baseline; absolute bits/bit (~0.18–0.24) is still well above strong compressor
 
 ---
 
+## 33. Confidence-driven ACTION with consequences (`decide.py`)
+
+Exercises the framing's **confidence / uncertainty** criterion together with action: the core predicts
+the next **byte** by an 8-bit greedy rollout (no peeking) and **decides commit-or-abstain** by its own
+confidence (product of the per-bit max-probs). Reward: +1 correct commit, −4 wrong commit, 0 abstain.
+Real prose, 200 KB.
+
+| threshold | coverage | acc@commit | net reward/byte |
+|---|---|---|---|
+| 0.00 (always commit) | 1.00 | 0.565 | −1.177 |
+| 0.50 | 0.57 | 0.784 | −0.045 |
+| 0.80 | 0.29 | 0.911 | **+0.158** |
+| 0.90 | 0.18 | 0.947 | +0.129 |
+
+- Next-byte top-1 accuracy **0.565** (chance 1/256).
+- **Confidence is calibrated:** accuracy@commit rises monotonically (0.57 → 0.95) as the threshold
+  tightens — higher self-confidence really does mean higher accuracy.
+- **Always-commit loses** (−1.177 under the asymmetric reward); **confidence-gating wins** (+0.158 at
+  τ=0.80) by committing only when confident and abstaining otherwise.
+
+**Significance:** the core uses its **own uncertainty** to make profitable decisions — confidence-driven
+action with real consequences, and the monotone accuracy-vs-confidence shows the confidence signal is
+meaningful. Exercises framing criteria #5 (action) + confidence. **Honest scope:** greedy-rollout
+next-byte prediction + a *swept* confidence threshold (the policy is thresholded, not learned); one
+real corpus; the reward structure (λ=4) is illustrative.
+
+---
+
 ## Appendix — prior-art map (search terms, all bit/discrete, not LLM-specific)
 
 - **Semantic hashing** — learn compact binary codes preserving similarity (the learned "hash").

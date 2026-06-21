@@ -556,3 +556,9 @@ bit-address — scale, stochastic dynamics, and function approximation remain op
 > trick). Shallow modelling has hit diminishing returns — **scale and deeper modelling are the
 > lever**, mirroring how LLMs are scaled.
 
+> **Confidence + action update.** The core now acts on its own *uncertainty*: predicting the next byte
+> and choosing commit-or-abstain by confidence, it turns a losing always-commit policy (−1.18
+> reward/byte) into a winning one (+0.16) by abstaining when unsure — and its confidence is calibrated
+> (accuracy@commit rises 0.57→0.95 as the threshold tightens). This exercises the framing's confidence
+> criterion alongside action, on real data.
+

@@ -40,5 +40,6 @@ res_*
 !mixmax.py
 !stream.py
 !mixns.py
+!decide.py
 data/
 gv_out/
