@@ -28,4 +28,5 @@ res_*
 !parity.py
 !aggregate.py
 !learn_state.py
+!compose.py
 gv_out/

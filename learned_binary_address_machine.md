@@ -983,6 +983,36 @@ _1 seed; not yet adversarially verified._
 
 ---
 
+## 24. Cycle 13 — selection COMPOSES (a task needing two computations) (`compose.py`)
+
+Task: `[type bit][F features][111][answer = (type, parity(type+features))][000]` — **bit1 is a held
+feature, bit2 is a computed aggregate.** The meta-learner chooses over **singles AND hold×count
+pairs** (content-disjoint dev, parsimony tie-break).
+
+Result (F=8, held-out): **LEARNED `{hold-1, count-2}`, test acc 1.00.**
+
+| candidate | dev | bits |
+|---|---|---|
+| **{hold-1, count-2}** | 1.00 | **2** (picked) |
+| {hold-1, count-4} | 1.00 | 3 |
+| {hold-2, count-2} | 1.00 | 3 |
+| {hold-2, count-4} | 1.00 | 4 |
+| every single (hold-*, count-*) | ≤ 0.50 | — |
+
+**Selection composes:** no single computation solves the task (all singles ≈ 0.50); four
+`{hold, count}` pairs reach 1.00; parsimony recovers the **minimal** combination. So cycle 12's
+"learn the computation" extends to **"select the minimal *combination* of computations"** — the
+machine composes primitives into a tiny learned program for a task needing both memory and
+computation.
+
+**Honest scope:** selection over a hand-defined family *and* a hand-defined combination space
+(singles + hold×count pairs); the "program" is a concatenation of state-features (no control flow),
+and the answer's two bits are separable (one held, one computed). Deeper composition (joint /
+non-separable answer functions; a *learned* combination space) is the open extension. 1 seed;
+mechanistically transparent (singles can't, the right pairs can, parsimony picks the minimal).
+
+---
+
 ## Appendix — prior-art map (search terms, all bit/discrete, not LLM-specific)
 
 - **Semantic hashing** — learn compact binary codes preserving similarity (the learned "hash").
