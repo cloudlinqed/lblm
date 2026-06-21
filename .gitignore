@@ -30,4 +30,5 @@ res_*
 !learn_state.py
 !compose.py
 !datascale.py
+!action.py
 gv_out/

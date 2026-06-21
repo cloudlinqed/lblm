@@ -1052,6 +1052,44 @@ more train → pays off only once the representation is right.
 
 ---
 
+## 26. Cycle 14 — prediction → POLICY: bit-native action that learns from reward (`action.py`)
+
+Extends "learn the computation" from supervised next-bit prediction to **reward-driven action**
+(framing-doc criteria #5 action, #9 over-trials adaptation). A contextual-bandit agent: sees a bit
+context, forms an address via a family member, **chooses an action**, gets a **reward bit**, and
+learns the policy **online from reward** (no labels).
+
+**Part A — improve over trials + generalise** (parity-act, 2 actions, chance 0.50):
+
+| representation | reward over trials | held-out |
+|---|---|---|
+| count-2 (right) | 0.997 → 1.00 | **1.00** |
+| hold-all (raw) | 0.936 → 1.00 | **0.50** |
+
+Both improve over trials (online adaptation from reward); the **right** representation generalises to
+held-out contexts (1.00), the **raw** one memorises training and collapses to chance on held-out
+(0.50) — the cycle-11 / data-scaling representation lesson, now for policy.
+
+**Part B — select the computation FROM REWARD** (no labels):
+
+| task | LEARNED | expected | held-out reward | dev signal |
+|---|---|---|---|---|
+| parity (2 act) | **count-2** | count-2 | 1.00 | count2=1.00, count4=1.00, count3=0.88, holds≤0.44 |
+| mod4 (4 act) | **count-4** | count-4 | 1.00 | count4=1.00, count3=0.81, count2=0.62, holds≤0.38 |
+
+The meta-learner recovers the right (minimal) computation **from reward alone** — `count-2` for
+parity-reward, `count-4` for mod4-reward. So "learn the computation" is not tied to labelled
+prediction; it works under reward supervision and outputs an **action**.
+
+**Significance:** the predictor becomes an **agent**. The core now selects the right computation to
+*act* (not just predict), learns the policy online, improves over trials, and generalises to unseen
+contexts — all bit-native, no language.
+
+**Honest scope:** single-step contextual bandit, small synthetic action sets, a tabular policy over
+the learned address; not yet sequential/multi-step planning or non-stationary environments. 1 seed.
+
+---
+
 ## Appendix — prior-art map (search terms, all bit/discrete, not LLM-specific)
 
 - **Semantic hashing** — learn compact binary codes preserving similarity (the learned "hash").
