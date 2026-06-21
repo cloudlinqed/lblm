@@ -562,3 +562,9 @@ bit-address — scale, stochastic dynamics, and function approximation remain op
 > (accuracy@commit rises 0.57→0.95 as the threshold tightens). This exercises the framing's confidence
 > criterion alongside action, on real data.
 
+> **Scale update.** Scaled to a 5.4 MB real-English corpus: the strong model reaches ~0.22 bits/bit
+> (vs gzip ~0.36) and beats gzip at every size. But the gain from more data **plateaus beyond ~1 MB** —
+> the bottleneck shifts from data to **model capacity**. The honest scaling triad: data, capacity, and
+> representation must scale together; pushing toward strong compressors (~0.15) needs more capacity, not
+> just more data (and, in pure Python, a compiled/vectorised core for LLM-scale).
+

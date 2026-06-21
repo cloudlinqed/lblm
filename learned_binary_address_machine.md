@@ -1362,6 +1362,36 @@ real corpus; the reward structure (λ=4) is illustrative.
 
 ---
 
+## 34. Scaling up — multi-MB real text, and the capacity ceiling (`mix.py`, `mixns.py`)
+
+Scaled to a **5.4 MB** real-English corpus (3 public-domain books). Whole-stream bits/bit:
+
+| size | `mix.py` (orders 0–4) | `mixns` (strong) | gzip |
+|---|---|---|---|
+| 1 MB | 0.2512 | **0.2222** | 0.3560 |
+| 2 MB | 0.2514 | **0.2215** | 0.3607 |
+| 4 MB | 0.2462 | — | 0.3631 |
+
+**Findings:**
+- **Both beat gzip at every scale** (~0.22–0.25 vs ~0.36); gzip does **not** improve with more data
+  (fixed 32 KB window), the bit-native models do.
+- **The strong model wins at scale:** `mixns` (~0.22) clearly beats the simple mixer (~0.25) — its
+  high-order + match components pay off with enough data.
+- **Honest catch — bits/bit *plateaus* beyond ~1 MB** (`mixns` 0.2222 → 0.2215; `mix` flat ~0.25).
+  Small-scale data gains were large (§25/§32: 0.26 → 0.23 from 100 → 500 KB); at MB scale they shrink
+  to ~0. The bottleneck has shifted from **data** to **model capacity**: a fixed-capacity context model
+  saturates once its contexts are populated, and more data can't buy structure it cannot represent.
+
+**Conclusion — the scaling triad:** data, model **capacity**, and representation must scale *together*.
+§25 showed data can't fix the wrong representation; §32 showed shallow tricks plateau at small data;
+this shows **data plateaus at fixed capacity**. Pushing from our ~0.22 toward strong compressors
+(~0.15 on enwik8) needs more **capacity** (longer contexts/match, deeper/larger mixing), not just more
+data. **Honest scope:** pure-Python ceiling (~5 MB tractable, minutes-to-hours, one core); 0.22
+bits/bit sits between gzip (0.36) and strong compressors (~0.15); LLM-scale data + capacity would need
+a compiled/vectorised implementation.
+
+---
+
 ## Appendix — prior-art map (search terms, all bit/discrete, not LLM-specific)
 
 - **Semantic hashing** — learn compact binary codes preserving similarity (the learned "hash").
