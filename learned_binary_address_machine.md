@@ -1388,7 +1388,44 @@ this shows **data plateaus at fixed capacity**. Pushing from our ~0.22 toward st
 (~0.15 on enwik8) needs more **capacity** (longer contexts/match, deeper/larger mixing), not just more
 data. **Honest scope:** pure-Python ceiling (~5 MB tractable, minutes-to-hours, one core); 0.22
 bits/bit sits between gzip (0.36) and strong compressors (~0.15); LLM-scale data + capacity would need
-a compiled/vectorised implementation.
+a compiled/vectorised implementation. _(Refined in §35: with PyPy reaching 4 MB, `mixns` continued
+down to 0.2161 — diminishing returns, not a hard plateau.)_
+
+---
+
+## 35. Overcoming the Python ceiling — PyPy (CPU, not GPU)
+
+The hot loop is **sequential + sparse** (dict context tables), so the lever is faster per-step
+**native CPU** execution, not parallelism/GPU. First, cheapest step: run the unchanged pure-Python
+code under **PyPy** (a JIT Python).
+
+Measured (bit-for-bit **identical** bits/bit — correctness preserved):
+
+| run | CPython 3.13 | PyPy 7.3.19 | speedup |
+|---|---|---|---|
+| `mix.py` @500 KB | 27.5 s | 8.4 s | 3.3× |
+| `mixns.py` @300 KB | 57.0 s | 14.9 s | 3.8× |
+
+**~3.3–3.8× out of the box** — capped by per-bit `bytes(slice)` allocation and dict-with-tuple keys
+that the JIT can't fully remove. This is **CPU expansion of the same architecture, not GPU**: the model
+is sparse + sequential (each bit depends on the prior step), which a GPU can't exploit; GPUs would only
+matter under a dense neural pivot.
+
+Leveraged immediately to reach **4 MB** on the strong model (≈9 min on CPython → **2.5 min** on PyPy):
+
+| size | `mixns` whole-stream | gzip |
+|---|---|---|
+| 1 MB | 0.2222 | 0.3560 |
+| 2 MB | 0.2215 | 0.3607 |
+| 4 MB | **0.2161** | 0.3631 |
+
+**This refines §34:** bits/bit is **not** at a hard plateau — 4 MB continued down (0.2215 → 0.2161);
+the earlier "plateau" was partly an artefact of only reaching 2 MB on CPython. More data still helps
+(diminishing but real), and capacity would help more.
+
+**Path forward:** bigger speedups need PyPy-friendly **integer (rolling-hash) context keys** or the
+planned **Rust/C++ native core** (the route to enwik8-scale, ~0.15). PyPy now buys ~3.5× and a clearer
+view of the scaling trend, with no code change and no GPU.
 
 ---
 

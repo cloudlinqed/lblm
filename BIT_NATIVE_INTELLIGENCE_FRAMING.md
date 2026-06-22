@@ -568,3 +568,9 @@ bit-address — scale, stochastic dynamics, and function approximation remain op
 > representation must scale together; pushing toward strong compressors (~0.15) needs more capacity, not
 > just more data (and, in pure Python, a compiled/vectorised core for LLM-scale).
 
+> **Runtime update (PyPy).** Overcoming CPython's per-bit ceiling is a CPU question, not a GPU one (the
+> model is sparse + sequential). Running the unchanged code under PyPy gives ~3.3–3.8× with identical
+> output; it let us reach 4 MB, where `mixns` reached **0.216 bits/bit** (still dropping — refining the
+> earlier "plateau"). Bigger scale needs integer-key code or the planned Rust/C++ core; GPUs only enter
+> under a dense-neural pivot.
+
