@@ -1610,6 +1610,43 @@ still cap the very highest orders at extreme scale.
 
 ---
 
+## 41. Full enwik8 — the headline number (`blmrs-strong`)
+
+Ran the strong native model on the **full enwik8** (100 MB / 800 M bits — the standard compression
+benchmark), `obits=27` (~11 GB tables), 28 min, one core.
+
+**Result: whole-stream `0.211107` bits/bit** (last-20% 0.2072) → enwik8 compresses to **~21.1 MB**.
+
+Scaling held to the end — monotonic, still descending:
+
+| size | `blmrs-strong` bits/bit |
+|---|---|
+| 10 M | 0.2253 |
+| 30 M | 0.2203 |
+| **100 M (full)** | **0.2111** |
+
+Where it sits on the enwik8 ladder (well-known approximate compressed sizes):
+
+| compressor | enwik8 | bits/bit |
+|---|---|---|
+| gzip | ~36 MB | ~0.36 |
+| bzip2 | ~29 MB | ~0.29 |
+| PPMd | ~24 MB | ~0.24 |
+| **blmrs-strong (ours)** | **~21.1 MB** | **0.211** |
+| lpaq1 | ~20 MB | ~0.20 |
+| paq8 | ~16 MB | ~0.16 |
+| cmix (SOTA) | ~15 MB | ~0.15 |
+
+So the from-scratch bit-native core, scaled to the native strong model, **beats gzip, bzip2, and
+PPMd**, and lands right next to **lpaq1** — a genuine, respectable context-mixing compressor between
+the classical tools and the strong PAQ family. **Honest scope:** bits/bit is the model's
+**cross-entropy** (the ideal arithmetic-coded size; a real archiver adds a small coder + decompressor
+overhead, which the Hutter Prize counts); ~0.5 Mbits/s; SOTA (~0.15) needs many more models + GB-scale
+tuned memory + cache-aware engineering. But as a measure of the *model*, **0.211 bits/bit on full
+enwik8** is a real, defensible headline for a bit-native predictor built from first principles.
+
+---
+
 ## Appendix — prior-art map (search terms, all bit/discrete, not LLM-specific)
 
 - **Semantic hashing** — learn compact binary codes preserving similarity (the learned "hash").
