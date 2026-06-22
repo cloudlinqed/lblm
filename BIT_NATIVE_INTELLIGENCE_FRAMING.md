@@ -601,8 +601,8 @@ bit-address — scale, stochastic dynamics, and function approximation remain op
 > bounded memory and near-exact quality. (gzip 0.37, this 0.220, SOTA ~0.15.)
 
 > **Full enwik8 headline.** On the full 100 MB enwik8 benchmark the bit-native strong model reaches
-> **0.211 bits/bit (~21.1 MB)** — beating gzip (~36 MB), bzip2 (~29 MB) and PPMd (~24 MB), landing next
-> to lpaq1 (~20 MB), behind paq8/cmix SOTA (~15 MB). Scaling held to the end (0.225→0.220→0.211 at
+> **0.209 bits/bit (~20.9 MB)** — beating gzip (~36 MB), bzip2 (~29 MB) and PPMd (~24 MB), reaching
+> lpaq1 territory (~20 MB), behind paq8/cmix SOTA (~15 MB). Scaling held to the end (0.224→0.219→0.209 at
 > 10→30→100 M). A from-scratch bit-native predictor is a genuinely respectable compressor — concrete
 > evidence that "intelligence as next-bit prediction" produces a real model of real data.
 

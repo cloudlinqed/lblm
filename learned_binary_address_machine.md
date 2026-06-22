@@ -1644,6 +1644,38 @@ the classical tools and the strong PAQ family. **Honest scope:** bits/bit is the
 overhead, which the Hutter Prize counts); ~0.5 Mbits/s; SOTA (~0.15) needs many more models + GB-scale
 tuned memory + cache-aware engineering. But as a measure of the *model*, **0.211 bits/bit on full
 enwik8** is a real, defensible headline for a bit-native predictor built from first principles.
+_(Improved to 0.209 in §42.)_
+
+---
+
+## 42. Push toward SOTA — a model-stacking round (`blmrs-strong`)
+
+A round of principled additions to the strong native model, each benched on enwik8:
+
+- SSE/APM chain extended **2 → 4 stages** (added current-partial-byte and match-length contexts);
+- a **second, longer byte-match model** (min length 8);
+- more **high-order reach** (orders 24, 32) + bigger high-order tables (HBITS 20 → 22).
+
+Effect (whole-stream bits/bit, matched obits):
+
+| size | baseline strong | improved | Δ |
+|---|---|---|---|
+| 10 M | 0.2253 | 0.2240 | −0.0013 |
+| 30 M | 0.2203 | 0.2186 | −0.0017 |
+| **100 M (full)** | 0.2111 | **0.2093** | −0.0018 |
+
+**Updated headline: `0.2093` bits/bit → enwik8 ~20.9 MB — now essentially at the lpaq1 level.**
+
+Per addition the gains are small (~0.0003–0.0007), but they **grow with scale** (more data populates
+the high orders and the match models, so each is worth more at 100 M than at 10 M).
+
+**Honest conclusion:** model-stacking works and the framework supports it cleanly, but each principled
+addition yields ~thousandths. Closing the remaining gap to SOTA (~0.15) is a deep, separate program —
+**indirect-context bit-history state machines** (the PAQ "ICM"), an **NN/LSTM mixer** (cmix's big
+lever), many more context models, and heavy per-context tuning — not a handful of increments. We have
+demonstrated the direction and reached **lpaq1 territory**; SOTA is research-grade from here. Causality
+is preserved by construction (every addition is predict-before-update; the base was verified
+bit-identical to the causal Python reference).
 
 ---
 

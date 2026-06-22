@@ -18,7 +18,7 @@ toy memory probe all the way to a real compressor.
 Scaled up, the bit-native predictor is a genuine compressor. On the standard **enwik8** benchmark
 (first 100 MB of Wikipedia), the native strong model reaches:
 
-> **0.211 bits/bit → enwik8 compresses to ~21.1 MB** (model cross-entropy / ideal coded size).
+> **0.209 bits/bit → enwik8 compresses to ~20.9 MB** (model cross-entropy / ideal coded size).
 
 Where that lands on the enwik8 ladder (approximate compressed sizes):
 
@@ -27,13 +27,13 @@ Where that lands on the enwik8 ladder (approximate compressed sizes):
 | gzip | ~36 MB | ~0.36 |
 | bzip2 | ~29 MB | ~0.29 |
 | PPMd | ~24 MB | ~0.24 |
-| **LBLM (`blmrs-strong`)** | **~21.1 MB** | **0.211** |
+| **LBLM (`blmrs-strong`)** | **~20.9 MB** | **0.209** |
 | lpaq1 | ~20 MB | ~0.20 |
 | paq8 | ~16 MB | ~0.16 |
 | cmix (SOTA) | ~15 MB | ~0.15 |
 
-A from-scratch bit-native predictor **beats gzip, bzip2, and PPMd** and lands next to **lpaq1** — and
-quality kept improving with data right to the full file (0.225 → 0.220 → 0.211 at 10 → 30 → 100 MB).
+A from-scratch bit-native predictor **beats gzip, bzip2, and PPMd** and reaches **lpaq1 territory** — and
+quality kept improving with data right to the full file (0.224 → 0.219 → 0.209 at 10 → 30 → 100 MB).
 Not SOTA (that needs far more models + GB-scale tuned memory + cache-aware engineering), but a real,
 defensible result for a predictor built from first principles. Compression = prediction = learning:
 this is the bit-native analogue of an LLM's perplexity, on real data.
