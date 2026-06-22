@@ -29,6 +29,7 @@ res_*
 !aggregate.py
 !learn_state.py
 !compose.py
+!induce.py
 !datascale.py
 !action.py
 !mdp.py

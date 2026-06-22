@@ -1679,6 +1679,50 @@ bit-identical to the causal Python reference).
 
 ---
 
+## 43. Path B — open-ended induction of bit-native computations (`induce.py`)
+
+Toward the end goal (**bit-native intelligence**, not language modeling): can the core **induce** the
+right computation by *composing* from a library of primitives — learning to compute, rather than only
+*selecting* from a 6-member hand-made family (cycles 12–13)?
+
+Induction over a 12-primitive library (latch-k, count-mod-m, count-bucket, max-run, last-k, …),
+exhaustive composition to depth 3, content-disjoint held-out + a random-answer scramble control:
+
+| task | induced program | test | scramble | verdict |
+|---|---|---|---|---|
+| parity | `cmod2` | 1.00 | 0.58 | SOLVED |
+| recall | `latch2` | 1.00 | 0.36 | SOLVED |
+| mod4 | `cmod4` | 1.00 | 0.30 | SOLVED |
+| majority | `cbucket` | 1.00 | 0.59 | SOLVED |
+| maxrun≥3 | `maxrun` | 1.00 | 0.70 | SOLVED |
+| compose | `latch1 + cmod2` | 1.00 | 0.37 | SOLVED |
+| automaton (01-transition parity) | _(spurious)_ | 0.58 | 0.62 | **BREAKS** |
+| automaton + primitive | `transcount` | 1.00 | — | SOLVED |
+
+**Findings:**
+- **6/7 induced** — the correct *minimal* program for each, generalising to held-out (1.00) with
+  scramble at chance, and it picks *different* primitives per task (latch for recall, counters for
+  parity/mod-m, bucket for majority, max-run for runs). Genuine learning-to-compute across a diverse
+  task set, not pattern-fitting.
+- **Breaks honestly.** Transition-parity is not in the library's span → no composition determines it;
+  the "best" found is spurious, and the **scramble control exposes it** (scramble 0.62 ≈ test 0.58; a
+  real program has scramble ≪ test). The method is self-honest — the controls catch the fake.
+- **Extensible** — add a transition primitive and it induces `transcount` → 1.00. The frontier extends
+  when the needed primitive exists.
+
+**Significance (honest, no hype):** this is cheap, CPU, example-driven **induction of computations** —
+composing and validating programs from data — a mechanism *unlike* LLM scaling, and it learns *what to
+compute* across recall / counting / comparison / run-detection / composition.
+
+**The real open question (Path B's frontier):** it is bounded by (a) the primitive **library** (can't
+induce what isn't in the span — automaton), (b) composition **depth + search** (exhaustive to 3; deeper
+is combinatorial — the known hard part of program synthesis), and (c) **hand-added** primitives. The
+genuine "intelligence via a different course" bet is whether the system can **grow its own library** —
+*invent the missing primitive from a failure* — rather than be handed it, and whether induction
+transfers to **real-data** tasks. Those are the next steps.
+
+---
+
 ## Appendix — prior-art map (search terms, all bit/discrete, not LLM-specific)
 
 - **Semantic hashing** — learn compact binary codes preserving similarity (the learned "hash").
