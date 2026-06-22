@@ -1459,6 +1459,38 @@ actually scale.
 
 ---
 
+## 37. Scaling with the fast stack — clean homogeneous curve (`mixfast.py` / `mixnsfast.py` under PyPy)
+
+With the integer-key models under PyPy, runs that were *hours* on CPython are *minutes* (e.g. 88 M
+bits / 11 MB in ~50 s for `mixfast`). Used this to test scaling properly.
+
+**Heterogeneous corpus is not a clean scaling axis.** On 4 concatenated books (11 MB), `mixfast` went
+5 M 0.2528 → 11 M 0.2609 — *up* — **but so did gzip** (0.369 → 0.374), because the appended Shakespeare
+(archaic English / verse) is genuinely harder. Composition dominates; concatenating different books ≠
+"more of the same data."
+
+**Clean homogeneous scaling** (single source — War & Peace prefixes), `mixnsfast`:
+
+| bytes | whole-stream | last-20% | gzip |
+|---|---|---|---|
+| 0.5 M | 0.2382 | 0.2258 | 0.3616 |
+| 1 M | 0.2288 | 0.2213 | 0.3630 |
+| 2 M | 0.2222 | 0.2139 | 0.3652 |
+| 3 M | 0.2181 | 0.2104 | 0.3651 |
+
+On homogeneous data, bits/bit improves **monotonically** with scale (0.238 → 0.218, still dropping at
+3 M; last-20 % to 0.210), while gzip stays flat (~0.365). **More data does help cleanly** — the earlier
+"plateau"/non-monotonic readings (§34) were corpus-composition artefacts, not a model ceiling.
+
+**Takeaways:** (1) the fast stack (PyPy + lossless integer keys) makes real-scale experiments
+practical — tens of millions of bits in seconds-to-minutes, one core, no GPU. (2) Clean scaling needs
+**homogeneous** data; heterogeneous concatenation conflates scale with difficulty. (3) The strong model
+holds ~0.21–0.22 vs gzip ~0.365 at every scale and is still descending at 3 M of one source.
+**Honest scope:** ~3 M single-source is still small vs enwik8 (100 M); the dict-based orders grow with
+data (RAM) — fixed-size hashing / the Rust core remain the path to much larger scale.
+
+---
+
 ## Appendix — prior-art map (search terms, all bit/discrete, not LLM-specific)
 
 - **Semantic hashing** — learn compact binary codes preserving similarity (the learned "hash").

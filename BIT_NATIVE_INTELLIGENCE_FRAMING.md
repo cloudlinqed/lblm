@@ -574,3 +574,9 @@ bit-address — scale, stochastic dynamics, and function approximation remain op
 > earlier "plateau"). Bigger scale needs integer-key code or the planned Rust/C++ core; GPUs only enter
 > under a dense-neural pivot.
 
+> **Fast stack + clean scaling.** Lossless integer context keys made the models ~12× (`mix`) / ~5.6×
+> (`mixns`) faster combined with PyPy, **bit-identical** output — and Rust-friendly (it's the native
+> data model). With the headroom, a clean *homogeneous* scaling curve (one book) shows bits/bit drops
+> **monotonically** with data (0.238 → 0.218 at 0.5→3 M, still falling) while gzip stays flat (~0.365);
+> the earlier non-monotonic readings were heterogeneous-corpus artefacts. More data genuinely helps.
+
