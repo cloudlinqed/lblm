@@ -1,0 +1,15 @@
+[package]
+name = "blmrs"
+version = "0.1.0"
+edition = "2021"
+description = "Bit-native context-mixing predictor (Rust core for LBLM) — the native engine for scale."
+
+[[bin]]
+name = "blmrs"
+path = "src/main.rs"
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+panic = "abort"

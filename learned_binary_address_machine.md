@@ -1527,7 +1527,51 @@ that **cap quality** and grow with scale. Getting **both** large scale **and** l
 *tuned* memory + efficient hash tables — practical in **Rust/C++** (the planned core), not pure Python
 (370 MB+ Python arrays are clumsy and sizing iteration is slow). enwik8 reference: gzip 0.37, strong
 compressors ~0.15; ours ~0.273 (bounded) / ~0.225 (exact, smaller scale) sits between. This is the
-clearest signal yet that the **native core is the next real lever**.
+clearest signal yet that the **native core is the next real lever**. _(§39 refines this: the native
+core gives bounded memory + near-exact quality and ~2× speed, but scale is memory-latency-bound, not
+language-bound — Rust is not a 100× lever here.)_
+
+---
+
+## 39. The Rust core — `blmrs`: first results and an honest correction (`blmrs/`)
+
+Started the native core. Installed Rust 1.96 (gnu, self-contained linker) and built `blmrs`: a faithful
+port of `mixfast` (logistic mixing, orders 0–4, the same lossless integer keys).
+
+**Correctness:** the HashMap variant is **bit-for-bit identical** to Python `mixfast`
+(0.253666 == 0.253666 @500 KB) — the algorithm port is verified.
+
+**Flat engine** (fixed-size open-addressing arrays + 8-bit checksum tags = bounded memory):
+
+| size | `blmrs` flat | exact (Python) | Δ |
+|---|---|---|---|
+| 500 KB | 0.254028 | 0.253666 | +0.0004 |
+| 5 MB | 0.253601 | 0.252790 | +0.0008 |
+
+→ **near-exact**: with proper *high-bit* multiplicative hashing + large tables (2²⁴ slots), the
+collision cost is tiny — unlike Python `mixnshash` (+0.048), because Rust affords big flat tables
+cheaply. The native core gets **bounded memory *without* the quality hit**.
+
+**Speed** (same model):
+
+| | @500 KB | @5 MB |
+|---|---|---|
+| CPython `mixfast` | 13.6 s | ~135 s |
+| PyPy `mixfast` | 2.26 s | 39.5 s |
+| `blmrs` (native flat) | 1.37 s | 22 s |
+
+→ **~1.7–1.8× over PyPy, ~6× over CPython.**
+
+**Honest correction.** Earlier sections framed Rust as "the 100× lever for scale." **That was wrong.**
+At scale this workload is **memory-latency-bound** — each bit does ~5 random accesses into tables far
+larger than cache, so throughput is ~1.8 Mbits/s (~550 ns/bit ≈ 5 × a DRAM miss) *regardless of
+language*. Native buys a **modest ~2×** (lower per-access overhead), not orders of magnitude. The real
+Rust wins here are **(a) bounded memory with near-exact quality** (big flat tables Python can't afford)
+and **(b)** a clean, fast-to-iterate native base. The genuine path to large speedups is **cache-aware
+design** (smaller working sets, fewer/cheaper accesses, SIMD on contiguous data), not language alone.
+
+**Next:** port the strong model (`mixns`) to the native core; explore cache-aware table layouts; the
+bounded-memory + near-exact property already lets `blmrs` scale at fixed RAM where Python degraded.
 
 ---
 

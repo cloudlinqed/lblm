@@ -586,3 +586,11 @@ bit-address — scale, stochastic dynamics, and function approximation remain op
 > clear signal: bounded RAM trades quality, so getting *both* scale and low bits/bit needs large tuned
 > memory — the **Rust/C++ core** is the next real lever.
 
+> **Rust core — honest correction.** Built `blmrs` (Rust 1.96): the algorithm port is **bit-identical**
+> to Python, and the flat fixed-size engine gives **bounded memory with near-exact quality** (+0.0004
+> vs +0.048 for Python's bounded version — big flat tables Python can't afford). But the expected "100×"
+> did **not** materialise: at scale the workload is **memory-latency-bound** (~5 random table accesses
+> per bit), so native is only ~1.7–1.8× over PyPy / ~6× over CPython. The real lever for large speedups
+> is **cache-aware design**, not language. Rust's genuine value here is bounded-memory-without-quality-
+> loss + a clean native base — not raw speed.
+

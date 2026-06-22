@@ -46,3 +46,5 @@ res_*
 !decide.py
 data/
 gv_out/
+
+blmrs/target/
