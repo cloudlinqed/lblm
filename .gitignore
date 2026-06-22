@@ -30,6 +30,7 @@ res_*
 !learn_state.py
 !compose.py
 !induce.py
+!invent.py
 !datascale.py
 !action.py
 !mdp.py

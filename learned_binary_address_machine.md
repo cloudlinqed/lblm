@@ -1723,6 +1723,41 @@ transfers to **real-data** tasks. Those are the next steps.
 
 ---
 
+## 44. Path B, step — primitive INVENTION: grow the toolbox from a failure (`invent.py`)
+
+A step (not the goal) toward open-ended induction: when the fixed library *breaks*, can the system
+**invent** the missing primitive by searching a **generative** space — primitives parameterised by a
+predicate over (prev, cur) bits × an aggregation (count mod m / ever / max-run)?
+
+| task | base test | result |
+|---|---|---|
+| 01-parity | 0.57 | **INVENTED** `01:cnt2` → 1.00 (the 01-transition counter) |
+| 10-parity | 0.62 | **INVENTED** `10:cnt2` → 1.00 |
+| 11-parity | 0.60 | **INVENTED** `and:cnt2` → 1.00 (found "both bits 1") |
+| saw-11 | 1.00 | base already solved (`maxrun`) |
+| 010-parity | 0.61 | **NOT invented** — needs a 3-bit predicate, beyond the 2-bit space |
+
+**Findings:**
+- **Invention works.** On tasks the fixed library can't do (base ≈ chance), the system searches the
+  generative space and *discovers* the missing primitive (transition / pair counters), solving at 1.00,
+  scramble-clean. It grows its own toolbox from failures.
+- **Self-honest.** base 0.57–0.62 → invention 1.00; the scramble control guards against spurious
+  "inventions."
+- **Invention has its own frontier.** `010-parity` needs a 3-bit predicate, beyond the 2-bit generative
+  space → honestly not invented — and that frontier is *itself* extensible (a 3-bit-predicate space
+  would reach it).
+
+So there is a **hierarchy of frontiers**, each extending the last — fixed library → invention (2-bit
+predicate DSL) → richer generative spaces — every level cheap, example-driven, self-honest, mappable.
+
+**Significance + honest scope (a step, not the goal):** a recursive, *verified*, example-driven
+mechanism for **discovering** computations — qualitatively unlike LLM scaling. But each generative
+space is still **hand-defined** here; truly open-ended discovery needs the system to grow its **own**
+space. Next: a learnable/growable generative space; deeper computations; **inventing groupings** (the
+bit→byte→event unit question); and grounding on a real test case.
+
+---
+
 ## Appendix — prior-art map (search terms, all bit/discrete, not LLM-specific)
 
 - **Semantic hashing** — learn compact binary codes preserving similarity (the learned "hash").
