@@ -42,6 +42,7 @@ res_*
 !stream.py
 !mixns.py
 !mixnsfast.py
+!mixnshash.py
 !decide.py
 data/
 gv_out/

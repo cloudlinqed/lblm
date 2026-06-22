@@ -1491,6 +1491,46 @@ data (RAM) — fixed-size hashing / the Rust core remain the path to much larger
 
 ---
 
+## 38. Bounded-RAM via fixed-size hashing — reaches scale, collision-limited (`mixnshash.py`)
+
+To break the dict-RAM ceiling, the byte-orders + sparse + word tables were converted from growing
+dicts to **fixed-size hashed count arrays** (the high orders already were), with **8-bit checksum tags**
+(evict-on-collision — the PAQ/zpaq trick). RAM is now **bounded** (~370 MB, independent of data size)
+and the model stays **causal** (flip-test passes).
+
+**Collision cost** (1.5 MB War & Peace, vs the exact `mixnsfast`):
+
+| model | whole-stream |
+|---|---|
+| `mixnsfast` (exact dict) | 0.2254 |
+| `mixnshash` (fixed hash, 22-bit, tagged) | 0.2739 |
+
+→ **+0.048 bits/bit.** Tags didn't recover it: the high orders (5–6) run at high load, so collisions
+are *frequent* and eviction loses count history about as much as merging — the fundamental
+memory↔quality tradeoff (no free lunch at small fixed tables).
+
+**Reaching scale** (enwik8, the standard 100 MB Wikipedia benchmark — bounded RAM runs sizes the exact
+dict can't):
+
+| bytes | `mixnshash` whole-stream | gzip |
+|---|---|---|
+| 10 M | 0.2751 | 0.3688 |
+| 30 M | 0.2729 | 0.3668 |
+
+- **Reaches 30 MB** (240 M bits) on fixed ~370 MB — the bounded-RAM goal, achieved; beats gzip (0.273
+  vs 0.367).
+- **Collision-limited:** roughly *flat* 10→30 MB (tables saturate), stuck ~0.273 — the +0.048 cost
+  caps it, and more data stops helping once the fixed tables are full.
+
+**Conclusion:** fixed-size hashing buys **bounded RAM** (so we reach 30 MB) at the cost of collisions
+that **cap quality** and grow with scale. Getting **both** large scale **and** low bits/bit needs large
+*tuned* memory + efficient hash tables — practical in **Rust/C++** (the planned core), not pure Python
+(370 MB+ Python arrays are clumsy and sizing iteration is slow). enwik8 reference: gzip 0.37, strong
+compressors ~0.15; ours ~0.273 (bounded) / ~0.225 (exact, smaller scale) sits between. This is the
+clearest signal yet that the **native core is the next real lever**.
+
+---
+
 ## Appendix — prior-art map (search terms, all bit/discrete, not LLM-specific)
 
 - **Semantic hashing** — learn compact binary codes preserving similarity (the learned "hash").

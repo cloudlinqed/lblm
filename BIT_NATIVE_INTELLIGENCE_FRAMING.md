@@ -580,3 +580,9 @@ bit-address — scale, stochastic dynamics, and function approximation remain op
 > **monotonically** with data (0.238 → 0.218 at 0.5→3 M, still falling) while gzip stays flat (~0.365);
 > the earlier non-monotonic readings were heterogeneous-corpus artefacts. More data genuinely helps.
 
+> **Bounded-RAM scaling (the limit).** Converting the context tables to fixed-size hashed arrays
+> (checksum-tagged) bounds RAM (~370 MB) and reaches **enwik8 at 30 MB** (240 M bits), beating gzip
+> (0.273 vs 0.367) — but collisions **cap** it (flat 10→30 MB) at a ~0.048 bits/bit cost vs exact. The
+> clear signal: bounded RAM trades quality, so getting *both* scale and low bits/bit needs large tuned
+> memory — the **Rust/C++ core** is the next real lever.
+
