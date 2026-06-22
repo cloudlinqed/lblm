@@ -1429,6 +1429,36 @@ view of the scaling trend, with no code change and no GPU.
 
 ---
 
+## 36. PyPy- and Rust-friendly integer keys — same quality, ~12× faster (`mixfast.py`)
+
+Replaced the per-bit context key — `(phase, bytes(partial), bytes(prev_bytes))` — with a single
+**lossless integer**: a sentinel-prefixed pack of phase + the partial current byte + the previous
+bytes, carried in a rolling `htail` integer (no per-bit `bytes` allocation, no tuple hashing). The
+encoding is a **bijection** with the old key (same equivalence classes).
+
+**Proven bit-identical** to `mix.py` (whole/tail match to 1e-12). Speed @500 KB:
+
+| | CPython 3.13 | PyPy 7.3.19 |
+|---|---|---|
+| `mix.py` (bytes/tuple keys) | 27.5 s | 8.4 s |
+| `mixfast.py` (integer keys) | 13.6 s | **2.26 s** |
+
+- Integer keys: **2.0×** on CPython alone (no bytes allocation).
+- They let the JIT do far better: **6.0×** PyPy-vs-CPython (was 3.3× with byte keys).
+- **Combined (integer keys + PyPy): ~12×** over the original (27.5 → 2.26 s), output unchanged.
+
+This confirms the analysis: lossless keys cost **no quality**, **multiply** the PyPy win, and converge
+the data model toward the eventual **Rust/C++** design (integer keys + open-addressing hash tables of
+fixed-width keys) — so it **de-risks** the native port rather than complicating it.
+
+The same change applied to the strong model gives `mixnsfast.py` — **bit-identical** to `mixns`
+(0.2581495288 match) and causality-clean (future-flip test passes). Its win is smaller (CPython 57.0 →
+40.5 s, ~1.4×; PyPy 10.1 s, ~5.6× combined) because `mixns`'s cost is dominated by the mixer / RMSProp
+/ APM float math rather than the context dicts — but it's a verified, lossless speedup of the model we
+actually scale.
+
+---
+
 ## Appendix — prior-art map (search terms, all bit/discrete, not LLM-specific)
 
 - **Semantic hashing** — learn compact binary codes preserving similarity (the learned "hash").

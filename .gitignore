@@ -35,11 +35,13 @@ res_*
 !scale.py
 !represent.py
 !mix.py
+!mixfast.py
 !mix_sse.py
 !two_layer_mix.py
 !mixmax.py
 !stream.py
 !mixns.py
+!mixnsfast.py
 !decide.py
 data/
 gv_out/
