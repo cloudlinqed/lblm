@@ -14,13 +14,13 @@ use std::fs;
 use std::time::Instant;
 
 const ORDERS: [usize; 7] = [0, 1, 2, 3, 4, 5, 6];
-const HORDERS: [usize; 3] = [8, 12, 16];
-const NH: usize = 3;
+const HORDERS: [usize; 5] = [8, 12, 16, 24, 32];
+const NH: usize = 5;
 const NM: usize = 7;
-const NIN: usize = NM + NH + 3; // 13: [orders 0..6][hi 8/12/16][sparse][word][match] then bias at NIN
-const NW: usize = NIN + 1; // 14 mixer weights (inputs + bias)
+const NIN: usize = NM + NH + 4; // [orders 0..6][hi orders][sparse][word][match][match2] then bias at NIN
+const NW: usize = NIN + 1; // mixer weights (inputs + bias)
 const NSEL: usize = 8 * 256;
-const HBITS: u32 = 20;
+const HBITS: u32 = 22;
 const CLIMIT: u32 = 255;
 const MAXB: usize = 6;
 const MULT: u64 = 0x9E37_79B9_7F4A_7C15;
@@ -170,7 +170,10 @@ fn main() {
     let mut final_g = [0.0f64; 3];
     let mut apm1 = Apm::new(256 * 8, 33, 0.007);
     let mut apm2 = Apm::new(1024, 33, 0.005);
+    let mut apm3 = Apm::new(256 * 8, 33, 0.006); // ctx = current partial byte + phase
+    let mut apm4 = Apm::new(256, 33, 0.005); // ctx = match-length bucket + phase
     let mut mm = MatchModel::new(22, 5);
+    let mut mm2 = MatchModel::new(22, 8); // a second, longer match model (min length 8)
 
     let mut hist: Vec<u8> = Vec::with_capacity(raw.len());
     let mut cur: u64 = 0;
@@ -245,6 +248,7 @@ fn main() {
             sts[NM + NH + 1] = stretch((n1 + DELTA) / (n0 + n1 + 2.0 * DELTA));
         }
         sts[NM + NH + 2] = mm.predicted(&hist, phase, byte_pos);
+        sts[NM + NH + 3] = mm2.predicted(&hist, phase, byte_pos);
         sts[NIN] = 1.0;
 
         let sel = ((phase << 8) | prev_byte as usize) & (NSEL - 1);
@@ -261,6 +265,10 @@ fn main() {
         let pa = 0.3 * p_mix + 0.7 * pa0;
         let pb0 = apm2.refine(pa, ((prev_byte.wrapping_mul(769) + prev2.wrapping_mul(31) + phase as u64) & 1023) as usize);
         let mut p = 0.3 * pa + 0.7 * pb0;
+        let pc0 = apm3.refine(p, ((cur << 3) | phase as u64) as usize);
+        p = 0.3 * p + 0.7 * pc0;
+        let pd0 = apm4.refine(p, ((mm.len.min(31) << 3) | phase) as usize);
+        p = 0.3 * p + 0.7 * pd0;
         p = p.clamp(1e-6, 1.0 - 1e-6);
 
         let y = bits[i];
@@ -316,6 +324,8 @@ fn main() {
         }
         apm1.update(yf);
         apm2.update(yf);
+        apm3.update(yf);
+        apm4.update(yf);
 
         cur = (cur << 1) | (y as u64);
         phase += 1;
@@ -323,6 +333,7 @@ fn main() {
             let b = (cur & 0xFF) as u8;
             hist.push(b);
             mm.update_after_byte(&hist, byte_pos);
+            mm2.update_after_byte(&hist, byte_pos);
             htail = ((htail << 8) | (b as u64)) & maskb[MAXB];
             if (65..=90).contains(&b) || (97..=122).contains(&b) {
                 word_hash = (word_hash.wrapping_mul(131) + ((b | 0x20) as u64)) & 0xFFF_FFFF;
