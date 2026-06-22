@@ -31,6 +31,7 @@ res_*
 !compose.py
 !induce.py
 !invent.py
+!recurse.py
 !datascale.py
 !action.py
 !mdp.py

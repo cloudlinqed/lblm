@@ -1758,6 +1758,40 @@ bit→byte→event unit question); and grounding on a real test case.
 
 ---
 
+## 45. Path B step — recursive synthesis: grow the space, hit the search wall (`recurse.py`)
+
+A step beyond invent.py (which broke at 3-bit patterns): give the system a **fixed grammar** of stream
+transducers `{s, not, lag_k, and/or/xor}` + aggregations and let it **synthesise arbitrary-depth
+computations by composition** (iterative deepening). A fixed finite grammar that *generates an unbounded
+space*.
+
+**Honesty:** the search tries thousands of expressions, so a single content-disjoint split is **not** a
+sufficient control — every winner is **re-validated on 5 fresh seeds**, SOLVED only if it survives.
+
+| task | found | cross-seed (5 fresh seeds) | program |
+|---|---|---|---|
+| 01-parity | d2 | 1.00 | `cnt4(~s ^ lag1(~s))` — a non-obvious but correct program |
+| 010-parity | d2 | **1.00** | `cnt2(lag1(s) & (~s & lag2(~s)))` — the **exact 010 detector** |
+| 0110-parity | — | — | NOT FOUND within budget |
+
+**Findings:**
+- **Grows its own space.** It synthesises the *exact* 010 detector by composition — crossing the
+  3-bit-pattern frontier the fixed 2-bit-predicate invention (§44) could **not** — from a fixed finite
+  grammar, no hand-added predicates. Verified across 5 fresh seeds (cross-seed is essential; here it
+  *confirms* the programs are real, not search-overfit).
+- **Hits the search wall.** `0110-parity` is expressible in the grammar, but the bounded iterative
+  deepening did not find it — the combinatorial explosion of program synthesis. **The limit is now
+  search, not expressiveness.**
+- **Methodology (no fake realities):** at large search scale, single-split controls are insufficient;
+  cross-seed validation is required, and is built in. The honesty guard must scale with the search.
+
+**Significance + honest scope (a step):** the "grow your own space" mechanism works for moderate depth —
+a fixed grammar generating *verified* computations that cross prior frontiers. It now hits the classic
+program-synthesis **search wall**; scaling it (type-directed / library-learning / guided search) is the
+open frontier, and the genuine "different course" bet rests there.
+
+---
+
 ## Appendix — prior-art map (search terms, all bit/discrete, not LLM-specific)
 
 - **Semantic hashing** — learn compact binary codes preserving similarity (the learned "hash").
