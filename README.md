@@ -1,136 +1,139 @@
 # LBLM — A Bit-Native Predictive Machine
 
-LBLM is a research exploration of a **bit-native predictive machine**: a model that predicts
-the **next bit** (`0`/`1`) from a history of bits, autoregressively. There is no text layer, no
-tokenizer, no vocabulary, and no embedding table — the operating material is the raw binary
-stream. The vocabulary size is **2**.
+LBLM predicts the **next bit** (`0`/`1`) from a history of bits, autoregressively. No text layer,
+no tokenizer, no vocabulary, no embedding table — the operating material is the raw binary stream.
+The vocabulary size is **2**.
 
-This repository is an honest research log. It contains a working reference implementation, a
-controlled benchmark, two design documents, and the empirical results — including the claims
-that were **overturned** when stress-tested. Nothing here is a finished product; it is a
-deliberately documented build → train → test → fine-tune loop.
+This repository is an honest research log: a working reference implementation, controlled benchmarks,
+two living design documents, and the empirical results — **including the claims that were overturned
+when stress-tested**. It is a deliberately documented build → train → test → fine-tune loop, from a
+toy memory probe all the way to a real compressor.
 
 > License: Apache-2.0.
 
 ---
 
+## Headline result — full enwik8
+
+Scaled up, the bit-native predictor is a genuine compressor. On the standard **enwik8** benchmark
+(first 100 MB of Wikipedia), the native strong model reaches:
+
+> **0.211 bits/bit → enwik8 compresses to ~21.1 MB** (model cross-entropy / ideal coded size).
+
+Where that lands on the enwik8 ladder (approximate compressed sizes):
+
+| compressor | enwik8 | bits/bit |
+|---|---|---|
+| gzip | ~36 MB | ~0.36 |
+| bzip2 | ~29 MB | ~0.29 |
+| PPMd | ~24 MB | ~0.24 |
+| **LBLM (`blmrs-strong`)** | **~21.1 MB** | **0.211** |
+| lpaq1 | ~20 MB | ~0.20 |
+| paq8 | ~16 MB | ~0.16 |
+| cmix (SOTA) | ~15 MB | ~0.15 |
+
+A from-scratch bit-native predictor **beats gzip, bzip2, and PPMd** and lands next to **lpaq1** — and
+quality kept improving with data right to the full file (0.225 → 0.220 → 0.211 at 10 → 30 → 100 MB).
+Not SOTA (that needs far more models + GB-scale tuned memory + cache-aware engineering), but a real,
+defensible result for a predictor built from first principles. Compression = prediction = learning:
+this is the bit-native analogue of an LLM's perplexity, on real data.
+
+---
+
 ## The idea, and the bet
 
-An LLM predicts the next *token* from a ~50k-way softmax. LBLM predicts the next *bit* — a
-single Bernoulli decision. The trade-off:
+An LLM predicts the next *token* from a ~50k-way softmax. LBLM predicts the next *bit* — one Bernoulli
+decision. The trade-off: reproducing the same content takes ~16× more steps, but each step has no
+softmax, no vocabulary, no embedding — just a probability for one bit. Going binary doesn't remove
+difficulty; it **relocates** it from *vocabulary size* to *dependency range in steps*. Most of this
+project is about handling that, and the central, repeated lesson is:
 
-- One ~50k-vocab token carries ≈ `log2(50000) ≈ 15.6` bits, so reproducing the same content
-  takes **~16× more steps**. (more iterations)
-- But each step has **no softmax, no vocabulary, no embedding table** — just a threshold.
-  (cheap per iteration)
+> **The lever is the representation — *what computation is written into the address* — not the readout.**
 
-Going binary does not remove difficulty; it **relocates** it from *vocabulary size* to
-**dependency range measured in steps**. With 1 bit per step, structure an LLM grabs in a few
-steps is spread across ~16× more of LBLM's. So the central problem is long-range memory in a
-single left-to-right bit chain — and most of this project is about escaping it.
+## What it became — the arc
 
-## Architecture — learned binary addresses
+Every result was reproduced and adversarially stress-tested by independent agents; several headline
+claims were **refuted and corrected** (that is the point).
 
-The core is a content-addressable memory operating entirely on bits.
+1. **Memory, with an exact horizon.** A content-addressable bit memory recalls across gaps with a hard
+   horizon `L = R + h − 4`; a learned **gated-latch** removes the horizon and holds a signal to body
+   length 1000. Early on we proved it was a Hamming-kNN lookup table, *not* a grammar learner.
+2. **Compute, don't hold.** For aggregates (parity, popcount mod m), *computing* a running feature
+   into the address generalises (1.00 held-out) while *holding* the raw inputs fails — the address
+   scales with the number of aggregate values, not the input count.
+3. **Learn the computation.** A meta-learner *recovers the right recurrent computation from data* —
+   the latch for recall, running-XOR for parity, the mod-m counter for mod-m — and *composes* them;
+   it works under labels, under immediate reward, and under **delayed reward** (a bit-native MDP with
+   TD learning). The machine also acts on its own **confidence** (commit/abstain) and detects
+   distribution shift on a real stream.
+4. **Real data, beats gzip.** As a next-bit predictor on real text/code the core beats gzip, and it
+   **discovers its own representation** — finding the byte period (p=8) from a period scan and
+   rebuilding the byte-aware structure from scratch.
+5. **Scale.** Pure-Python → **PyPy** (~3.5×) → **lossless integer keys** (~12× combined, bit-identical)
+   → bounded-RAM hashing → a **Rust core** (`blmrs`). On homogeneous data, bits/bit drops monotonically
+   with more data.
+6. **The native strong model → the headline.** Porting the strong model to Rust gives bounded memory
+   with near-exact quality (what Python couldn't), yielding the enwik8 result above.
 
-- **Unit** = `(address ∈ {0,1}^A, value ∈ {0,1}, strength w)`.
-- **Query** = the current `R`-bit register, optionally extended by a recurrent state.
-- **Retrieval** = weighted Hamming proximity (`XOR + popcount`), softened by a kernel
-  `exp(-β · weighted_hamming)` — i.e. learned **locality-sensitive hashing**.
-- **Output** = signed, strength-weighted vote → threshold → next bit.
-- **Learning** = a gradient-free **binary Self-Organizing Map**: reinforce + pull the nearest
-  correct unit toward the query, weaken + push wrong-voters away, allocate a unit when no
-  correct neighbour exists, anneal, merge duplicates. (`frozen` = immobile templates;
-  `mobile` = addresses self-organize.)
+**Honest corrections along the way** (kept in the design doc): "the readout is the bottleneck" → it was
+an *incomplete address*; "the plateau is a model ceiling" → it was *corpus composition*; "Rust is the
+100× lever" → at scale the workload is *memory-latency-bound*, so native is ~2×, and Rust's real value
+is bounded-memory-without-quality-loss.
 
-This single substrate unifies several ideas the project explored from first principles — and
-keeps re-deriving known mechanisms:
+## Architecture
 
-| Idea | What it becomes here |
-|---|---|
-| Blockchain-style chaining with a *learned* "hash" | a recurrent binary summary (semantic hashing) |
-| Multi-directional relations | query-conditional weighting (attention) |
-| A matrix with coordinates | content-addressable memory (Hopfield) |
-| Carry history in fixed width | recurrent address `addr_t = H(addr_{t-1}, bit)` |
-
-**Recurrent address modes** (`--addr`): `register` (memoryless), `shift` (history window),
-`fold` (fixed-width xor-compression). **Readout weighting** (`--weights`): `uniform`, `mi`
-(marginal mutual information), `contrastive` (separates collisions), `conditional`
-(query-dependent / attention-style). Generation is **warm-started** so the recurrent state is
-primed over the prefix rather than starting cold.
-
-## What we have learned (verified)
-
-Every result below was reproduced and adversarially stress-tested by independent agents; some
-of the original conclusions were **refuted** and corrected.
-
-1. **It does the toy task by memorisation, not learning.** On the seed streams it reaches 100%
-   and reproduces both continuations, but units sit verbatim on training registers and
-   leave-one-window-out generalisation is only ~0.43–0.79. It is a Hamming-kNN lookup table
-   with smoothing, not a grammar learner.
-2. **Collisions are an information-theoretic wall.** When the register is not Markov-sufficient
-   (e.g. `R=4` on the seed data), *exhaustively* 0 of 4096 deterministic tables can fit — no
-   learning rule or probabilistic output helps; only more sufficient state does.
-3. **Recurrent memory works, with an exact horizon.** On the long-range benchmark the usable
-   memory horizon is exactly **`L = R + h − 4`**, verified as a hard step function across a
-   16-cell grid.
-4. **Genuine body-invariant rule transfer exists (but is bounded).** A rule-scramble control
-   shows the machine transfers `answer = f(type)` to *unseen* bodies (intact ≈0.72–0.78 vs
-   scrambled ≈0.44–0.53) — real generalisation, but only inside the memory band and capped
-   ~0.78.
-5. **The in-band ceiling is capacity + data, not the readout metric.** No static *or*
-   query-conditional weighting moves it (at matched unit count, weighting ties uniform exactly);
-   the lever is capacity and data, and the residual is a uniform-Hamming representational floor
-   that worsens as nuisance dimensions grow.
-6. **A learned recurrent code removes the memory horizon.** The recurrent state update becomes a
-   learned transition table; a **gated-latch** family (a write-gate with a latch prior, a few
-   learnable bits) is *reliably learned* from data (recovers "latch the first informative bit and
-   hold") and holds the signal to **body length 1000**, where the fixed `shift` window collapses
-   past `L = R+h−4`. Verified high-confidence (8-seed, scramble-controlled, z = 3.4–7.6).
-
-**Current frontier:** **window/body compression.** The encoder is horizon-free, but long-range
-accuracy still attenuates because the (body × state) space the readout must cover grows with
-length — so the remaining limit is the *readout*, not the memory.
+The core is a content-addressable memory on bits — `unit = (address, value, strength)`, retrieval by
+weighted Hamming proximity softened by a kernel, output by a signed vote — which, scaled up for real
+data, becomes **online logistic context mixing**: several byte-aware context models each vote a
+probability for the next bit, a small online-trained logistic unit mixes them in the logit domain, an
+SSE/APM stage recalibrates, and the result codes the bit. The strong model adds hashed high-order
+contexts, a byte-match model, a two-layer context-selected mixer, non-stationary count decay, and
+RMSProp. See [`ARCHITECTURE.md`](ARCHITECTURE.md), [`FLOW.md`](FLOW.md), and
+[`BIT_NATIVE_INTELLIGENCE_FRAMING.md`](BIT_NATIVE_INTELLIGENCE_FRAMING.md).
 
 ## Repository layout
 
 | File | What it is |
 |---|---|
-| [`ARCHITECTURE.md`](ARCHITECTURE.md) | Schematic / diagrams (inference loop, learning loop, address layout, benchmark) |
-| [`blm.py`](blm.py) | The machine: learned-address memory, recurrent addresses, SOM learning, readout weighting, learned/gated-latch encoder |
-| [`bench.py`](bench.py) | Long-range recall benchmark + memory-curve experiment (a controlled capability probe) |
-| [`encoder.py`](encoder.py) | Cycle 4 — hill-climb a learned recurrent encoder; the hand-built latch diagnostic |
-| [`gated.py`](gated.py) | Cycle 5 — learn the gated-latch write-schedule; horizon-removal comparison |
-| [`bit_native_predictive_machine.md`](bit_native_predictive_machine.md) | v1 design — the original bit-native machine concept |
-| [`learned_binary_address_machine.md`](learned_binary_address_machine.md) | v2 design + full results, lessons, and verification verdicts |
-| [`sweep.jsonl`](sweep.jsonl) | Recorded metrics from the parameter sweep |
+| [`learned_binary_address_machine.md`](learned_binary_address_machine.md) | The living design doc — every cycle, result, and verification verdict (41 sections) |
+| [`BIT_NATIVE_INTELLIGENCE_FRAMING.md`](BIT_NATIVE_INTELLIGENCE_FRAMING.md) | The thesis (intelligence below language) + an evidence scorecard |
+| [`blm.py`](blm.py) | The original learned-address memory machine (SOM learning, recurrent addresses, latch) |
+| `mix.py` / `mixfast.py` | Online logistic context mixing (the simple model); `mixfast` uses lossless integer keys |
+| `mixns.py` / `mixnsfast.py` / `mixnshash.py` | The strong model: high orders, match, sparse/word, two-layer mixer, SSE, non-stationarity, RMSProp |
+| [`blmrs/`](blmrs/) | **The Rust core** — `blmrs` (simple) and `blmrs-strong` (strong); the native engine behind the headline |
+| `mdp.py` / `action.py` / `decide.py` / `stream.py` | Sequential RL, reward-driven action, confidence-gated decisions, anomaly detection |
+| `aggregate.py` / `parity.py` / `learn_state.py` / `compose.py` | Learn-the-computation: compute-vs-hold, selecting & composing the recurrent computation |
+| `bench.py` / `region.py` / `multi.py` / `gated.py` / … | The earlier capability probes (memory horizon, recall, latch) |
 
 ## Running it
 
-Requires only Python 3 (standard library; no dependencies).
+The Python models need only Python 3 (stdlib). For scale, use **PyPy** (~3.5×, identical output) or the
+**Rust** core (the strong model).
 
 ```bash
-# Train on the seed streams and print results (memorisation baseline)
+# Original memory machine (memorisation baseline) and recurrent recall
 python blm.py --R 8 --weights uniform --lowo
 
-# Recurrent address vs memoryless register
-python blm.py --addr shift --R 6 --hist 4 --weights uniform
+# Next-bit compression on real text (bits/bit vs gzip)
+python mix.py data/corpus.txt 300000          # simple model
+python mixns.py data/corpus.txt 300000        # strong model
+pypy3 mixfast.py data/corpus.txt 2000000      # faster (PyPy), identical output
 
-# Long-range recall benchmark — the memory curve (in-sample and held-out)
-python bench.py --R 6 --K 8
-python bench.py --R 6 --K 12 --holdout
+# The Rust core (the headline engine)
+cd blmrs && cargo build --release
+./target/release/strong <path> <byte_cap> <obits>   # e.g. enwik8 100000000 27
 ```
 
-Key flags: `--mode {frozen,mobile}`, `--addr {register,shift,fold}`, `--hist h`,
-`--weights {uniform,mi,contrastive,conditional}`, `--R`, `--lowo`.
+(Corpora are not committed; any real file works. enwik8 is the standard benchmark.)
 
 ## Methodology
 
-Claims in this repo are not taken on faith. Each cycle ends with an **adversarial verification
-pass** — independent agents that audit the code, recompute baselines, and try to *break* the
-headline claim (including searching for counter-examples and optimising against it). Several
-results in the history were overturned this way and corrected in the design doc. The intent is
-that a reader can reproduce and falsify every number.
+Claims here are not taken on faith. Each cycle ends with an **adversarial verification pass** —
+independent agents audit the code, recompute baselines, and try to *break* the headline claim
+(searching for counter-examples, optimising against it, re-implementing from scratch). Native results
+add a **future-bit-flip causality self-test** (flip a future bit; every earlier prediction must be
+bit-identical) to prove no leakage. Several results in the history were overturned this way and
+corrected. The intent: a reader can reproduce and falsify every number.
 
 ---
 
