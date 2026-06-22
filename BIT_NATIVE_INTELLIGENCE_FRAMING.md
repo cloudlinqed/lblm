@@ -594,3 +594,9 @@ bit-address — scale, stochastic dynamics, and function approximation remain op
 > is **cache-aware design**, not language. Rust's genuine value here is bounded-memory-without-quality-
 > loss + a clean native base — not raw speed.
 
+> **Strong model at scale (the payoff).** Ported the full strong model to the native core, verified
+> near-exact (+0.0004 vs Python). On enwik8 it reaches **0.220 bits/bit at 30 MB** — ~0.05 better than
+> Python's bounded version (0.273), and unlike Python it **keeps improving with data** (collisions no
+> longer cap it). So the native core delivers exactly what it was for: the *good* model at scale, with
+> bounded memory and near-exact quality. (gzip 0.37, this 0.220, SOTA ~0.15.)
+

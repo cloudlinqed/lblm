@@ -1575,6 +1575,41 @@ bounded-memory + near-exact property already lets `blmrs` scale at fixed RAM whe
 
 ---
 
+## 40. The strong model in the native core — quality at scale (`blmrs/src/bin/strong.rs`)
+
+Ported the **full strong model** (`mixnsfast`: orders 0–6, hashed high orders 8/12/16, byte-match,
+sparse, word, two-layer context-selected mixer + global + final, 2 chained SSE/APM, non-stationary
+count-halving, RMSProp) to the native core, with flat bounded tables (high-bit hash + checksum tags).
+
+**Verified near-exact** (1 MB War & Peace):
+
+| | whole-stream |
+|---|---|
+| Python `mixnsfast` (exact) | 0.228847 |
+| `blmrs-strong` (native, obits=23) | 0.229253 |
+
+→ Δ **+0.0004** — the port is faithful (tiny flat-collision + libm delta), and ~2.6× faster than PyPy.
+
+**At scale on enwik8** (obits=24), vs Python's bounded `mixnshash`:
+
+| bytes | `blmrs-strong` | Python `mixnshash` (bounded) | gzip |
+|---|---|---|---|
+| 10 M | **0.2253** | 0.2751 | 0.3688 |
+| 30 M | **0.2203** | 0.2729 | 0.3668 |
+
+- The native strong model beats Python's bounded version by **~0.05 bits/bit** — Rust affords bigger
+  tables (2²⁴ vs 2²²) and uses the corrected high-bit hash, so collisions don't cripple the high orders.
+- It **keeps improving with data** (10 M 0.2253 → 30 M 0.2203), unlike the Python bounded version which
+  was collision-capped (flat ~0.273). The strong model genuinely benefits from scale.
+
+This is the concrete payoff of the native core: **the good model at scale, with bounded memory and
+near-exact quality** — what Python couldn't do. enwik8 context: gzip 0.37, this **0.220**, strong
+compressors ~0.15 — a real compressor between gzip and SOTA, still improving with data. **Honest scope:**
+~0.5 Mbits/s (strong model, memory-bound); SOTA needs far more models/memory/tuning; bounded tables
+still cap the very highest orders at extreme scale.
+
+---
+
 ## Appendix — prior-art map (search terms, all bit/discrete, not LLM-specific)
 
 - **Semantic hashing** — learn compact binary codes preserving similarity (the learned "hash").
