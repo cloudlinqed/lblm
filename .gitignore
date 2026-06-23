@@ -32,6 +32,7 @@ res_*
 !induce.py
 !invent.py
 !recurse.py
+!library.py
 !datascale.py
 !action.py
 !mdp.py

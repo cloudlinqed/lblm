@@ -1792,6 +1792,40 @@ open frontier, and the genuine "different course" bet rests there.
 
 ---
 
+## 46. Path B step — library learning: the loop works, abstraction quality is the wall (`library.py`)
+
+DreamCoder-style bootstrapping: process a curriculum and add each solved program (its feature stream)
+to the library as a reusable primitive, so harder tasks compose from learned pieces. Cross-seed
+validated throughout.
+
+| stage | result |
+|---|---|
+| flat (base grammar) `0110-parity` | NOT FOUND (the §45 search wall) |
+| curriculum `01-parity` | SOLVED → learned `L1 = ~s^lag1(~s)` (transition stream) |
+| curriculum `10-parity` | SOLVED → learned `L2 = s^lag1(s)` (= same transition stream, **redundant**) |
+| curriculum `010-parity` | SOLVED **reusing L1**: `~s & (L1 & lag1(L1))` |
+| `0110-parity` WITH the library | still NOT FOUND |
+
+**Findings:**
+- **The bootstrapping loop works.** `010-parity`'s solution *reused* the learned `L1` — the library is
+  genuinely composed-from; reuse happens.
+- **But it did not crack `0110`.** The extracted abstractions are not the *right* reusable pieces:
+  `L1` and `L2` are **redundant** (both the transition stream), and it never learned the clean
+  01-/10-detectors that `0110` (= `and(lag2(01-detector), 10-detector)`) needs — the "keep the first
+  solution" bias yields non-ideal primitives.
+- **Honest crux:** the loop is easy; **good abstraction extraction is the wall.** Cracking it needs
+  refactoring / compression to find the right common sub-programs (DreamCoder's actual hard step), not
+  just keeping winning streams.
+
+**Significance + honest scope:** the whole Path B arc — induction → invention → recursive synthesis →
+library learning — is mechanically real and **self-honest** (cross-seed throughout; no fake success
+here, the loop works but the wall stands). It traces the "different course" bet to its genuine crux:
+**discovering *good* abstractions efficiently** — search + compression over programs. That difficulty
+(not expressiveness, not the loop) is where the bet now squarely rests, and it is a known-hard open
+problem.
+
+---
+
 ## Appendix — prior-art map (search terms, all bit/discrete, not LLM-specific)
 
 - **Semantic hashing** — learn compact binary codes preserving similarity (the learned "hash").
