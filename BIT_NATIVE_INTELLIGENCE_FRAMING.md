@@ -620,3 +620,17 @@ bit-address — scale, stochastic dynamics, and function approximation remain op
 > 10→30→100 M). A from-scratch bit-native predictor is a genuinely respectable compressor — concrete
 > evidence that "intelligence as next-bit prediction" produces a real model of real data.
 
+> **Path B update — induction of bit-native computations (learn *what* to compute).** Beyond
+> compression, a second line *induces the computation* that solves a task and grows its toolbox from
+> failures. It cracked its long-standing wall (`0110`-parity): a **boundary-aware detector** plus an
+> **anti-unified `detect(P)` template** solve it and **generalise to unseen patterns** (verified five
+> independent ways, leakage-free — design doc §48). The same `WAKE → SLEEP → BIND` mechanism then climbs
+> a ladder — generalising across families (§49), **inventing the missing aggregation** for count-equality
+> `#0==#1` (§50), and **inventing a running counter** for Dyck-1 balanced parentheses (§51) — each new
+> boundary found, named, and crossed, validated **full-domain-exact + cross-seed + scramble-clean**. This
+> directly exercises §7 criteria 1/7/10 (build internal state, generalise, operate without language) on a
+> rising ladder of computational power (detectors → counts → comparisons → state). Honest scope: a
+> self-honest, example-driven mechanism, *not* general intelligence — the generative space is still
+> hand-provided (autonomous growth is the open problem) and the next wall is non-local / stack-structured
+> computation. A concrete, falsifiable step in the "different course" bet, below language.
+

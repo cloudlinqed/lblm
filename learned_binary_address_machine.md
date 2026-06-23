@@ -1924,6 +1924,268 @@ alignment, base-match, reverse-complement) move the core from "generalises off E
 specialised DNA compressors of the same family** (human in-band ~1.62, E. coli in-range ~1.91) — concrete
 evidence the architecture models *real structure*, cheaply **retargetable per domain**. (Reference
 numbers are literature ranges; an exact same-genome GeCo3/JARVIS run would sharpen the head-to-head.)
+## 50. Path B — CRACKING the wall: boundary-aware detectors + induced `detect(P)` (`wake_lgg.py`, `probe_*.py`)
+
+§47 located the crux precisely: the wall needs **(a) a boundary-aware grammar** so exact pattern
+detection aggregates cleanly, **and (b) parameterised abstraction** — a `detect(P)` *template*, not
+concrete winning streams. A fan-out research pass (12 angles) then **built and adversarially verified
+five independent prototypes**, each re-run from scratch against the live `induce.py` harness. The
+baseline wall was re-confirmed first: `recurse.py` finds `01-parity` (`cnt4(~s^lag1(~s))`) and
+`010-parity` (`cnt2(lag1(s)&(~s&lag2(~s)))`) but reports **`0110-parity` NOT FOUND** at depth-6 / 9000
+streams. All five prototypes cross it — cross-seed 1.00 on fresh seeds, scramble-clean, and
+**generalising to UNSEEN patterns** (not just hitting `0110`):
+
+| prototype | mechanism | `0110` | unseen-pattern generalisation | honest depth |
+|---|---|---|---|---|
+| `probe_antiunify_…` | boundary-aware `lit(s,k,b)` detector + **Plotkin LGG induces `detect(P)`** | ✅ cs 1.000 | **4/4** (incl. unseen arity `00110`); reconstructs the hand detector bit-for-bit | template genuinely **induced** by anti-unification |
+| `probe_param_detect_cegis_…` | `detect(s,P)` + CEGIS over `(P, agg)` | ✅ cs 1.000 | **6/6** by binding only `P`, frozen `agg=cnt2` | template hand-supplied; only the parameter learned |
+| `probe_sentinel_boundary_…` | sentinel (option-monad) lag fixes boundaries; the project's **own** bottom-up search then finds `0110` | ✅ depth-4 `cnt2(~s&lag1(s)&lag2(s)&~lag3(s))` | **3/3** | proves the **boundary half** independently |
+| `probe_diff_soft_detector_…` | differentiable conv-detector + smooth parity head (gradient, not enumeration) | ✅ recovers `W=[0,1,1,0], m=4` | **4/4** incl. `m=5` unseen arity | the **"different course"** cross-check |
+| `probe_cvec_canonical_dedup_…` | full-domain cvec dedup **excludes the trick e-class** | ✅ full-domain-exact | **15/15** unseen (lengths 2–6) | the **honesty layer** |
+
+The verified fixes:
+- **Boundary-aware detection.** Replace zero-filling `lag` with a positional literal
+  `lit(s,k,b) = [1 if (i>=k and s[i-k]==b) else 0]`, AND the contiguous literals, and **mask to
+  `i>=m-1`** (the validity window). Then `cnt2(detector_P) ≡ trans_pat(s,P) % 2` is an **exact
+  identity** — verified *exhaustively* over all inputs at L=6, 8, 10 (zero mismatches), so it is a
+  theorem, not an L=12 coincidence. The zero-fill version disagrees on 12–49 % of rows. The sentinel
+  probe is the clincher: **fix the boundary and the existing blind search finds `0110` on its own** —
+  the search wall was a *representation* defect wearing a search costume.
+- **Parameterised abstraction.** Anti-unify the per-pattern detector ASTs (group by arity → the
+  polarity slot that varies becomes a metavariable `P[j]`; a fold over the literal list lifts arity)
+  into `detect(P) = cnt2(AND_j lit(s, |P|-1-j, P[j]))`. Freeze it, then for an unseen task bind **only**
+  `P` from examples (leave-one-pattern-out). This is the move `library.py`/`refactor.py` could not make
+  because they kept concrete streams.
+
+**Findings:**
+- **The wall is cracked, verified five ways.** `0110-parity` is solved scramble-clean, cross-seed,
+  leakage-free, by a parameterised detector — by five independent routes (enumerative, CEGIS,
+  boundary-algebra, gradient, e-graph). The baseline genuinely fails; the crack is non-trivial.
+- **Generalisation is real, not memorisation.** Held-out patterns the solver was never given
+  (`0011`, `1001`, `00110`, …) are solved by binding only the parameter, surviving cross-seed +
+  balanced-scramble + negative controls (`detect(P)` correctly refuses to fire on majority /
+  total-parity / mod3, and `|P|≥6` patterns are honestly UNSAT — too rare at L=12).
+- **A real harness bug, fixed.** `recurse.py`'s fixed `scramble<0.7` gate is **mis-calibrated**:
+  P-parity labels are class-imbalanced at L=12 (e.g. `00110` majority-baseline ≈ 0.78), so the gate
+  **false-rejects** genuine solvers on rare patterns. The fix is **balanced accuracy** (mean per-class
+  recall) → real 1.00 / scramble ≈ 0.50 for every pattern. (Verified separately: the `0110` crack also
+  survives the *original* raw `<0.7` gate, so this change is not load-bearing for the headline — only
+  for not false-rejecting imbalanced patterns. Worth back-porting to `recurse.py`.)
+
+**Significance + honest scope (the ceiling, named not hidden):** the "different course" — *learn what to
+compute, then abstract it into a reusable parameterised primitive* — now crosses the exact wall that
+stopped induction → invention → recursion → library learning → refactoring. **But:** in four of the five
+prototypes the *structural shape* of `detect(P)` (AND-of-delayed-literals + validity mask) is **built
+into the grammar by hand**; only `antiunify` *induces* the shape (by LGG over independently-searched
+detector ASTs), and even there LGG suffices only because the wake-search returns canonically-aligned
+ASTs. **No prototype yet demonstrates fully autonomous discovery of the detector template from raw
+failures alone**, and everything here cracks **one** task family — sliding-window pattern-count parity.
+The genuinely open question — *is parameterised abstraction a general mechanism, or a per-family manual
+move?* — is therefore **not yet settled**. The canonical mechanism is consolidated in `wake_lgg.py`
+(wake-synthesise clean detectors → LGG-induce `detect(P)` → bind-only-`P` generalisation, with the cvec
+honesty layer and balanced gate); the make-or-break test is **§51 (M3): the same machinery on a
+genuinely *different* family**, with no hand-built template. No fake success — the wall is down, and the
+next wall is named.
+
+---
+
+## 51. Path B — M3: is the abstraction mechanism GENERAL, or a per-family move? (`m3_different_family.py`)
+
+§50 cracked the wall for **one** family (parity of contiguous-pattern occurrences) and named the real
+open question: when we move to a *different* family, must we hand-write a new template, or does the same
+`WAKE → SLEEP(LGG) → BIND` machinery discover the new abstraction itself? If it is a per-family manual
+move, the wall just reappears one family up and "open-ended" fails. M3 runs the identical machinery —
+with a **general** grammar (literals over arbitrary lag *subsets*, not just contiguous; a small set of
+aggregations) — on three graduated families, with the same honest controls (balanced cross-seed on
+fresh seeds, multi-draw balanced-scramble, full-domain direct-solver check over all 2¹² inputs, no
+pattern supplied).
+
+| family | what is new | result |
+|---|---|---|
+| **M3a — gapped patterns** (`1.1`, `1..1`, `0.1`, `1.1.1`) | literal conjunctions at **non-contiguous** lags; the §50 contiguous `detect(P:string)` literally cannot encode a gap | **PASS — 5/5 held-out**: WAKE recovers the exact gapped detector from labels, the parameter generalises *string → spec* (a set of `(lag,bit)` literals), every held-out pattern is full-domain-exact, cross-seed 1.000, scramble ≈ 0.50, recovering the canonical detector |
+| **M3b — threshold counting** (`#occ(P) ≥ t`) | a **second abstraction axis**: the *aggregation* changes from parity to a count-threshold, parameterised by `t` | **PASS — 4/4 held-out**: a parity-only grammar provably cannot solve `#11≥2`; extending the aggregation lets WAKE induce a `(detector, threshold)` template and bind unseen `(P,t)` — cross-seed 1.000, scramble ≈ 0.50 (milestone M2: a second induced axis) |
+| **M3c — count equality** (`#0 == #1`, the counting essence of `aⁿbⁿ`) | a two-sided count equality `sum == k` — outside the detector + {parity, threshold} span | **UNSAT, honestly** — no `(spec, aggregation)` in the grammar is a full-domain-exact solver; WAKE returns nothing. The wall **relocates** here |
+
+**Findings:**
+- **Not a per-family manual move — within a paradigm.** The *same* `WAKE → SLEEP → BIND` machinery
+  generalises across families when they lie in the **detector + aggregation** span: M3a by enriching the
+  **parameter** (contiguous string → arbitrary literal-spec), M3b by enriching the **aggregation**
+  (parity → threshold). In both, the abstraction is *induced and bound*, not re-hand-built, and every
+  held-out member passes the full-domain-exact + cross-seed + scramble gate.
+- **The boundary is real and precisely located.** M3c (`#0==#1`) is **honestly UNSAT**: count equality
+  is not a fixed-window parity/threshold, so the detector paradigm does not reach it. The mechanism does
+  not fake a solution — it returns nothing, exactly as a self-honest system should.
+- **So the honest answer is nuanced, not a yes/no.** Parameterised abstraction is a **general mechanism
+  *within* a computational paradigm**, spanning multiple parameter and aggregation axes — but crossing
+  into a *genuinely new* paradigm (counting/balance) still needs a **new primitive**. That is precisely
+  the §44 *invention* move (grow the generative space), now relocated one level up: the open frontier is
+  **inducing the new aggregation/primitive itself**, not the parameter within a fixed one.
+
+**Significance + honest scope:** M3 settles the §50 open question in the only honest way — *partially,
+with a sharp edge*. The "different course" abstraction mechanism is **not** brittle-per-family inside the
+detector+aggregation paradigm (a real result: it transfers across gap-structure and across the
+parity↔threshold axis with no new template), **and** it has a **named, falsifiable boundary** at
+count-equality where a new primitive is required. The Path B ladder is therefore: ✅ M1 cracked
+(`wake_lgg.py`), ✅ M2/M3 multi-axis generalisation within the paradigm (`m3_different_family.py`), and
+the next genuine frontier — **autonomous discovery of a new primitive/aggregation when the paradigm runs
+out** (M3c's `count==k`, then stateful/counting languages) — is exactly where the bet now rests. No
+fake success: two families transferred, one honestly did not, and we know precisely why.
+
+---
+
+## 52. Path B — crossing the relocated wall: invent the missing AGGREGATION (`invent_agg.py`)
+
+§51 left an honest boundary: `#0==#1` (count **equality**) was UNSAT because no
+detector + {parity, threshold} solver exists. That is the §44 situation — *the library
+breaks* — lifted one level: the missing piece is now an **aggregation**, not a detector
+parameter. This step applies the §44 **invention** move to the aggregation axis: when the
+known aggregations `{cnt2, ge_k}` fail, search a **generative** space of count-predicates
+`compare(count, k)` for `compare ∈ {ge, le, eq, ne}` and *invent* the missing comparator —
+then fold it into a parameterised template and generalise.
+
+| step | result |
+|---|---|
+| **(A) invent from failure** | `{cnt2, ge_k}` is UNSAT on `#0==#1`; searching the generative comparator space **invents `eq`** → solver `count(detector) eq 6`, **full-domain-exact**, cross-seed 1.000, balanced-scramble 0.52, a genuinely new form |
+| **(B) generalise the invented comparator** | fold into a template `detect(spec) op k` parameterised by `(spec, op, k)`; **4/4 held-out** count-comparison tasks (`#1 ne 6`, `#0 eq 4`, `#10 le 1`, `#11 ge 2`) bound from labels, all full-domain-exact, cross-seed 1.000, scramble ≈ 0.51 |
+| **(C) the next honest boundary** | **Dyck-1** balanced parentheses (`0='(' +1`, `1=')' −1`; balanced iff total `==0` **and** every prefix sum `≥0`) stays **UNSAT even with the invented comparators** |
+
+**Findings:**
+- **The invention move lifts to the aggregation axis.** A failure that was a hard boundary in
+  §51 is crossed by *inventing the missing comparator from a generative space* and binding it —
+  the same self-honest, example-driven discovery as §44, now over aggregations. The invented
+  `eq` is validated full-domain-exact (a coincidence cannot pass), not just split-lucky.
+- **It generalises, honestly — including equivalent re-parameterisations.** Held-out
+  count-comparison tasks are all solved; notably the system sometimes finds an *equivalent* exact
+  program rather than the textually-intended one (e.g. `#1 ≤ 3` solved as `#0 ≥ 9`, flagged
+  `canonical=False`) — which is correct (it is the same function, proven over all 2¹² inputs) and
+  a fair reminder that the gold standard is full-domain equivalence, not surface form.
+- **The next wall is precisely located: stateful computation.** Dyck-1's `total==0` part *is*
+  `#0==#1` (now solvable via the invented `eq`), but the **prefix-`≥0`** condition is not a
+  function of any global count — it needs a running **prefix-min / counter** over the stream. No
+  fixed-window detector + count comparison can express it, so it is honestly UNSAT. The boundary is
+  the *stateful prefix condition*, not the equality.
+
+**Significance + honest scope:** the **hierarchy of frontiers** the project has tracked since §43
+extends cleanly and self-honestly — fixed library → invented detector primitives (§44) → recursive
+synthesis (§45) → induced parameterised detectors (§50) → multi-axis generalisation (§51) → **invented
+aggregations (§52)** — each level crossed by discovery within a generative space, each validated by
+full-domain exactness + cross-seed + scramble, each then exposing the next wall. The **standing honest
+caveat** is unchanged and now sharply scoped: the *generative space itself* (here, the comparator set
+`{ge,le,eq,ne}`) is hand-provided, exactly as §44's predicate DSL was; the deepest open problem remains
+**growing the generative space autonomously**. And the next concrete target is no longer a pattern or a
+count-predicate but **stateful computation** — a running counter / automaton (Dyck, `aⁿbⁿ`,
+prefix-balance) — which connects back to §43's automaton and the latch/counter mechanisms of cycles
+9–13. That is where the bit-native "learn-what-to-compute" bet now genuinely rests.
+
+---
+
+## 53. Path B — the STATEFUL frontier: invent a running counter (`stateful.py`)
+
+§52 located the next wall precisely: Dyck-1 balanced parentheses stayed UNSAT even with the
+invented count-comparators, because *"every prefix sum ≥ 0"* is not a function of any **global**
+count — it needs a running **prefix-min**, i.e. **state** carried along the stream (the cycles 9–13
+mechanism: latch / running-XOR / mod-m counter, now needed for *program induction*). This step
+invents a stateful primitive and runs the same `WAKE → SLEEP → BIND` machinery over it.
+
+- **primitive:** a signed running counter `bal[i] = bal[i-1] + step(s[i])` with `step: 0→+1, 1→−1`;
+- **readouts:** `final = bal[-1]`, `min` = min prefix, `max` = max prefix;
+- **atom:** `compare(readout, k)` reusing the §52 comparator DSL; a feature is one atom **or** a
+  conjunction of two (Dyck needs *balanced* AND *never-negative*).
+
+| step | result |
+|---|---|
+| **(A) Dyck without state** | UNSAT in the §52 detector+comparator grammar (a global count cannot see the prefix condition) — boundary holds |
+| **(B) invent the counter** | WAKE (readout/op/k **not** supplied) finds Dyck = **`final le 0 AND min ge 0`**, **full-domain-exact**, cross-seed 1.000, balanced-scramble 0.50 |
+| **(C) generalise** | leave-one-out over a single-counter family — curriculum `{min≥0, final==0, max≤2}`, **4/4 held-out** (`final≥1`, `max≥3`, `min≤−2`, `final≤0`) recovered from labels, all full-domain-exact, cross-seed 1.000 |
+| **(D) next boundary** | **palindrome** `s == reverse(s)` is UNSAT in **both** the detector+comparator *and* the single-counter grammar |
+
+**Findings:**
+- **The hierarchy of frontiers extends into STATE.** A running counter — the cycles 9–13 mechanism,
+  now *invented from a program-synthesis failure* — crosses §52's wall: Dyck-1 is solved
+  full-domain-exact, scramble-clean, cross-seed. The solver found is `final le 0 AND min ge 0`, an
+  *equivalent* exact form of `final == 0 AND min ≥ 0` (under `min ≥ 0`, `final ≤ 0` forces
+  `final = 0`) — proven over all 2¹² inputs, an honest reminder that full-domain equivalence, not
+  surface form, is the bar.
+- **It generalises across the single-counter family.** Held-out `(readout, comparator, threshold)`
+  tasks are all bound from labels and full-domain-exact — the stateful abstraction is parameterised
+  and reused, not re-hand-built per task.
+- **The next wall is, again, precisely located: non-local / multi-counter structure.** Palindrome
+  compares position `i` to `L-1-i` — a two-ended relation a single left-to-right counter cannot
+  carry — so it is honestly UNSAT in both grammars. The frontier relocates to **two-way / stack /
+  multi-counter** computation (palindrome, `aⁿbⁿcⁿ`).
+
+**Significance + honest scope:** the Path B ladder now reads §43 fixed library → §44 invented detector
+primitives → §45 recursive synthesis → §50 induced parameterised detectors → §51 multi-axis
+generalisation → §52 invented aggregations → **§53 invented stateful counter** — six honest levels, each
+crossed by discovery within a generative space, each validated by full-domain exactness + cross-seed +
+scramble, each exposing the next wall. The **standing caveat persists and is identical at every level**:
+the generative space itself (here: the step map `{0→+1,1→−1}`, the readout set `{final,min,max}`, and
+depth-2 conjunction) is **hand-provided** — autonomous growth of the space remains the deepest open
+problem. The honest headline is *not* "general intelligence below language"; it is a **self-honest,
+example-driven, full-domain-verified mechanism for inducing and reusing bit-native computations that
+climbs a real ladder of computational power** — detectors → counts → comparisons → state — with each
+boundary found, named, and crossed, and the next (non-local / stack-structured computation) now squarely
+in view. That is a concrete, falsifiable foundation for the "different course" bet, not a claim that the
+bet is won.
+
+---
+
+## 54. Path B — a REAL model on REAL data: induce the representation, mix to predict, scale (`real_test.py`, `real_mix.py`, `real_scale.py`)
+
+§43–47 and §50–53 are mechanism on synthetic `gen()` bit-tasks (solved to full-domain-exact 1.000). Mechanism is
+not the goal; the goal is a real bit-native model. This step is the honest real test: run Path B's
+induction — *search bit-native computations and keep the ones that predict, by held-out bits/bit* — on
+**real** streams (English text, and **E. coli DNA in native 2-bit**, the purest real bit stream), and
+unify it with Path A's predictor. Metric throughout = held-out / online **bits/bit** (cross-entropy =
+compression; raw 1.0000, lower better), externally referenced against gzip on the same stream; causal,
+stdlib-only.
+
+**(a) Induction on real data (`real_test.py`).** Greedy forward selection over a computation pool
+(simple `{lag, mod}` vs `{… + running counts + detectors}`), held-out bits/bit. The induction
+**discovers real structure** — it selects `mod 8` first on text (*rediscovers the byte from raw bits*),
+`lag 3/6` on DNA (codon scale). Path B's own primitives (popcount `bucket`, pattern `det`) **are
+selected and lower bits/bit** (text 0.506→0.426). Honest limit: a single sparse conjunction-table beats
+order-0 but trails gzip on text (0.426 vs 0.380); on DNA it already beats gzip (0.974 vs 0.995).
+
+**(b) The unification — induce + mix (`real_mix.py`).** Path B induces *what to compute* (the predictive
+**period/unit** found by a quick scan + counter/detector contexts); Path A **mixes** them online
+(logistic context mixing, the lpaq idea). One engine (the framing's M6: compression = prediction =
+program-finding). It **beats gzip on both** real streams. On DNA — where the 8-bit byte assumption is
+*wrong* — inducing the right unit (codon, p=6) **plus reverse-complement contexts** (base-complement is
+a bit-flip in 2-bit DNA, so restriction-site RC-palindromes are the §53 palindrome structure on real
+data) beats the byte model *and* gzip.
+
+**(c) Scaling (`real_scale.py`).** Rebuilt with the project's proven levers — **integer rolling keys**
+(no per-bit slicing; cf. `mixfast`), a **stretch LUT** (PAQ), an **SSE/APM** recalibration stage, and a
+revcomp table — ~4× faster, multi-MB tractable. The scaling law holds:
+
+| stream | 0.5 MB | 1 MB | 2 MB | 4 MB | gzip |
+|---|---|---|---|---|---|
+| **text** (corpus_big, whole) | 0.2462 | 0.2417 | 0.2403 | **0.2328** | ~0.36 |
+| **text** +SSE+order8 (last-20%) | — | 0.235 | 0.229 | **0.2167** | ~0.36 |
+| **text** (homogeneous Shakespeare, whole) | — | 0.2565 | 0.2510 | **0.2431** | ~0.377 |
+| **DNA** (ecoli, +revcomp+SSE, whole) | — | 0.9701 | 0.9709 | **0.9658** | ~0.992 |
+
+**Findings:**
+- **It is a real, scalable model on real data.** Held-out bits/bit falls monotonically with data on
+  homogeneous text (0.2565→0.2431, still dropping), reaching **0.217 (mature) on corpus_big at 4 MB —
+  lpaq1 / the §41 enwik8-headline band (0.209)** — and DNA reaches **≈1.91 bits/base** (0.9534 mature),
+  each beating gzip by a widening margin.
+- **The induction is real and interpretable at every scale:** it rediscovers the **byte** (`p=8`) on
+  text and the **codon** (`p=6`) on DNA from raw bits, and its counter/detector/revcomp primitives —
+  the very computations the synthetic ladder learned to induce — measurably help, *most* on DNA where
+  the representation must be discovered (the byte model is wrong there).
+- **Honest scope.** Not SOTA (cmix ~0.15 on text). On *text* the byte unit is already right, so the
+  induced engine ties the strong byte model (both beat gzip) — induction's clear *win* is on DNA. A 6 MB
+  `corpus_big` point regressed: the documented **heterogeneous-corpus artifact** (the homogeneous
+  single-work curve is cleanly monotone, confirming it). And the pure-Python per-bit loop caps practical
+  scale at ~6–10 MB.
+
+**Significance:** the "different course" is no longer only a synthetic-task mechanism — it is a **real
+bit-native predictive model that scales on real data and beats gzip on two very different streams (text
+and genome) by inducing what to compute**, unified with Path A into one engine. The next genuine scaling
+lever is the **Rust core (`blmrs`)** — port this *induced-representation* engine there to reach
+enwik8 / full-genome (100 MB) scale, exactly as §39–41 did for the byte model, now general.
 
 ---
 

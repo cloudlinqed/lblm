@@ -46,6 +46,39 @@ def eval_feature(feat, ans, tr_idx, ev_idx):
     return sum(1 for i in ev_idx if pred.get(feat[i], gm) == ans[i]) / len(ev_idx)
 
 
+def balanced_eval(feat, ans, tr_idx, ev_idx):
+    """Mean per-class recall -- skew-immune (a constant/majority predictor scores ~0.5).
+    Raw accuracy is mis-calibrated as a scramble control when labels are class-imbalanced:
+    for a rare pattern P, P-parity is skewed (e.g. 00110 ~0.78 majority), so a shuffled-label
+    control can score ~0.78 by imbalance alone and FALSE-REJECT a true detector. Balanced
+    accuracy restores a real ~0.5 chance baseline (design doc sec 48)."""
+    table = defaultdict(Counter)
+    for i in tr_idx:
+        table[feat[i]][ans[i]] += 1
+    pred = {k: c.most_common(1)[0][0] for k, c in table.items()}
+    gm = Counter(ans[i] for i in tr_idx).most_common(1)[0][0]
+    cor = defaultdict(int); tot = defaultdict(int)
+    for i in ev_idx:
+        tot[ans[i]] += 1
+        if pred.get(feat[i], gm) == ans[i]:
+            cor[ans[i]] += 1
+    rec = [cor[c] / tot[c] for c in tot if tot[c] > 0]
+    return mean(rec) if rec else 0.0
+
+
+def balanced_scramble(feat, n, seed, tr_idx, dv_idx, draws=5):
+    """Balanced-accuracy scramble control, averaged over several random-label draws.
+    A single draw is a noisy estimate of the ~0.5 chance baseline and can spike to ~0.57,
+    false-rejecting a genuine 2-valued detector; averaging de-noises it without loosening
+    the threshold (a 2-valued feature still cannot fit random labels beyond chance)."""
+    vals = []
+    for d in range(draws):
+        rng = random.Random(seed * 7 + 1 + d * 1009)
+        rand = [rng.randint(0, 1) for _ in range(n)]
+        vals.append(balanced_eval(feat, rand, tr_idx, dv_idx))
+    return mean(vals)
+
+
 # stream functions (re-runnable on any data) -----------------------------------
 def f_atom(s):
     return list(s)
@@ -87,7 +120,6 @@ def validate(fn, agg, task_fn, seeds):
 
 def synth(task_fn, n=300, seed=0, max_depth=6, max_streams=9000):
     items = gen(task_fn, n, seed); ans = [a for _, a in items]
-    ans_s = [a for _, a in gen(task_fn, n, seed, scramble=True)]
     seqs = [list(s) for s, _ in items]
     tr_idx, dv_idx, te_idx = split_idx(n, seed); trdv = tr_idx + dv_idx
     streams = {}
@@ -102,9 +134,12 @@ def synth(task_fn, n=300, seed=0, max_depth=6, max_streams=9000):
     def test(expr, vals, fn):
         for agg in AGGS:
             feat = [aggregate(row, agg) for row in vals]
+            # honesty gate: high held-out accuracy AND a skew-immune balanced scramble
+            # near chance (replaces the old raw <0.7 shuffle gate, which false-rejects
+            # genuine detectors on class-imbalanced patterns -- design doc sec 48).
             if eval_feature(feat, ans, tr_idx, dv_idx) > 0.98 and \
                eval_feature(feat, ans, trdv, te_idx) > 0.98 and \
-               eval_feature(feat, ans_s, tr_idx, dv_idx) < 0.7:
+               balanced_scramble(feat, n, seed, tr_idx, dv_idx) < 0.55:
                 return (f"{agg}({expr})", agg, fn)
         return None
 

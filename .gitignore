@@ -50,6 +50,13 @@ res_*
 !mixnsfast.py
 !mixnshash.py
 !decide.py
+!wake_lgg.py
+!m3_different_family.py
+!invent_agg.py
+!stateful.py
+!real_test.py
+!real_mix.py
+!real_scale.py
 data/
 gv_out/
 
