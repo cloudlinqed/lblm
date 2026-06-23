@@ -600,6 +600,13 @@ bit-address — scale, stochastic dynamics, and function approximation remain op
 > longer cap it). So the native core delivers exactly what it was for: the *good* model at scale, with
 > bounded memory and near-exact quality. (gzip 0.37, this 0.220, SOTA ~0.15.)
 
+> **Cross-domain generalisation (DNA).** Fed real genomes through a *dumb 2-bit adapter* (A/C/G/T → 2
+> bits) into the unchanged compressor, the core drops below the 2-bit floor on both E. coli (1.94
+> bits/base) and human chr21 (**1.68**) — and on the repetitive human chromosome it lands *in the
+> specialised DNA-compressor band* (~1.6–1.7, NAF/GeCo3/JARVIS family), off-the-shelf, because the match
+> model's text-repeat strength transfers to DNA repeats. Evidence the architecture captures real
+> structure, not English quirks. (Untuned: byte-misalignment vs codon period-3, no reverse-complement.)
+
 > **Full enwik8 headline.** On the full 100 MB enwik8 benchmark the bit-native strong model reaches
 > **0.209 bits/bit (~20.9 MB)** — beating gzip (~36 MB), bzip2 (~29 MB) and PPMd (~24 MB), reaching
 > lpaq1 territory (~20 MB), behind paq8/cmix SOTA (~15 MB). Scaling held to the end (0.224→0.219→0.209 at
