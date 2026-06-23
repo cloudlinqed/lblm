@@ -15,7 +15,8 @@ import sys, math
 ORDERS = [1, 2, 3, 4, 6, 8, 12, 16]   # context orders in BASES
 NM = len(ORDERS)
 I_MT = NM
-NIN = NM + 1                               # + match input
+I_RC = NM + 1
+NIN = NM + 2                               # + forward match + reverse-complement match
 NW = NIN + 1                               # + bias
 MAXB = max(ORDERS)
 
@@ -77,6 +78,50 @@ class Match:
                     self.ptr = prev; self.len = self.minlen
 
 
+class RCMatch:
+    """Inverted-repeat / reverse-complement match: detect when the current context is the RC of an
+    earlier forward k-mer (shares the forward k-mer table via a rolling RC hash) and predict the
+    complement, reading backward. Verified to kill hash collisions."""
+
+    def __init__(self, K=24):
+        self.K = K; self.rcmask = (1 << (2 * K)) - 1
+        self.rc_h = 0; self.ptr = -1; self.len = 0
+
+    def predict(self, bases, bp, bit_in_base, partial):
+        if self.len == 0 or self.ptr < 0:
+            return 0.0
+        pb = 3 - bases[self.ptr]                          # complement of the matched base
+        if bit_in_base == 0:
+            bit = (pb >> 1) & 1
+        else:
+            if ((pb >> 1) & 1) != partial:
+                return 0.0
+            bit = pb & 1
+        st = 1.5 + 0.30 * min(self.len, 32)
+        return st if bit == 1 else -st
+
+    def update_after_base(self, bases, bp, fwd_tab, fwd_mask):
+        if self.len > 0 and self.ptr >= 0:
+            if (3 - bases[self.ptr]) == bases[bp]:
+                self.ptr -= 1; self.len = min(self.len + 1, 65535)
+                if self.ptr < 0:
+                    self.len = 0
+            else:
+                self.len = 0; self.ptr = -1
+        self.rc_h = ((self.rc_h >> 2) | ((3 - bases[bp]) << (2 * (self.K - 1)))) & self.rcmask
+        if self.len == 0 and bp + 1 >= self.K:
+            p = fwd_tab[(self.rc_h * 2654435761) & fwd_mask]
+            if p >= self.K + 1 and p <= bp:               # earlier forward k-mer = bases[p-K..p-1]
+                ok = True
+                for k in range(self.K):
+                    if bases[p - self.K + k] != 3 - bases[bp - k]:
+                        ok = False; break
+                if ok:
+                    self.ptr = p - self.K - 1             # continue backward, complemented
+                    if self.ptr >= 0:
+                        self.len = self.K
+
+
 def run(bases, alr=0.01, delta=0.5, rms_decay=0.999, rms_eps=1e-3):
     n = len(bases)
     masks = [(1 << (2 * B)) - 1 for B in range(MAXB + 1)]
@@ -84,6 +129,7 @@ def run(bases, alr=0.01, delta=0.5, rms_decay=0.999, rms_eps=1e-3):
     tables = [dict() for _ in ORDERS]
     w = [0.0] * NW; g = [0.0] * NW                     # RMSProp per-weight accumulator
     match = Match()
+    rcmatch = RCMatch()
     bhist = 0
     sts = [0.0] * NW; cells = [None] * NM
     tot = 0.0; log2 = math.log(2.0); sqrt = math.sqrt
@@ -102,6 +148,7 @@ def run(bases, alr=0.01, delta=0.5, rms_decay=0.999, rms_eps=1e-3):
                 cells[k] = c
                 sts[k] = stretch((c[1] + delta) / (c[0] + c[1] + 2 * delta))
             sts[I_MT] = match.predict(bases, bp, bit_in_base, partial)
+            sts[I_RC] = rcmatch.predict(bases, bp, bit_in_base, partial)
             sts[NIN] = 1.0
             P = squash(sum(w[k] * sts[k] for k in range(NW)))
             tot += -(math.log(P if ybit == 1 else 1 - P) / log2)
@@ -114,6 +161,7 @@ def run(bases, alr=0.01, delta=0.5, rms_decay=0.999, rms_eps=1e-3):
                 cells[k][ybit] += 1
         bhist = ((bhist << 2) | base) & htmask
         match.update_after_base(bases, bp)
+        rcmatch.update_after_base(bases, bp, match.tab, match.mask)
     return tot / n   # bits per base
 
 
