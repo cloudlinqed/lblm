@@ -126,12 +126,12 @@ RMSProp. See [`ARCHITECTURE.md`](ARCHITECTURE.md), [`FLOW.md`](FLOW.md), and
 
 | File | What it is |
 |---|---|
-| [`learned_binary_address_machine.md`](learned_binary_address_machine.md) | The living design doc — every cycle, result, and verification verdict (54 sections) |
+| [`learned_binary_address_machine.md`](learned_binary_address_machine.md) | The living design doc — every cycle, result, and verification verdict (55 sections) |
 | [`BIT_NATIVE_INTELLIGENCE_FRAMING.md`](BIT_NATIVE_INTELLIGENCE_FRAMING.md) | The thesis (intelligence below language) + an evidence scorecard |
 | [`blm.py`](blm.py) | The original learned-address memory machine (SOM learning, recurrent addresses, latch) |
 | `mix.py` / `mixfast.py` | Online logistic context mixing (the simple model); `mixfast` uses lossless integer keys |
 | `mixns.py` / `mixnsfast.py` / `mixnshash.py` | The strong model: high orders, match, sparse/word, two-layer mixer, SSE, non-stationarity, RMSProp |
-| [`blmrs/`](blmrs/) | **The Rust core** — `blmrs` (simple) and `blmrs-strong` (strong); the native engine behind the headline |
+| [`blmrs/`](blmrs/) | **The Rust core** — `blmrs` (simple), `blmrs-strong` (strong; the enwik8 headline), and `blmrs-dna` (genomes at chromosome scale, §55) |
 | `mdp.py` / `action.py` / `decide.py` / `stream.py` | Sequential RL, reward-driven action, confidence-gated decisions, anomaly detection |
 | `aggregate.py` / `parity.py` / `learn_state.py` / `compose.py` | Learn-the-computation: compute-vs-hold, selecting & composing the recurrent computation |
 | `induce.py` / `invent.py` / `recurse.py` / `library.py` / `refactor.py` | **Path B** — induction → invention → recursive synthesis → library learning → refactoring (the wall) |

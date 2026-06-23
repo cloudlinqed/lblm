@@ -2189,6 +2189,45 @@ enwik8 / full-genome (100 MB) scale, exactly as §39–41 did for the byte model
 
 ---
 
+## 55. Native DNA at full-genome scale — the Rust port (`blmrs/src/bin/dna.rs`)
+
+§49 reached the DNA specialist band (E. coli 1.908, human chr21 1.616 bits/base) with `dna.py` — a
+2-bit-base, codon-phase, reverse-complement-aware context mixer — but in pure Python, so it could not
+run whole chromosomes at speed. This is the §54 "next lever" executed: a faithful native port into the
+Rust core, using `strong.rs`-style **bounded-RAM flat open-addressing tables** (multiplicative hash +
+8-bit checksum tag) for the base-history orders, with the forward and reverse-complement match models
+ported verbatim. The byte-oriented `strong.rs` is left untouched; `dna.rs` is the period-/unit-correct
+engine (the unit is the 2-bit base, the period is the codon-3 reading frame, inverted repeats via
+reverse-complement — none of the 8-bit byte assumptions).
+
+| genome | bases | `dna.py` (exact dict) | **`blmrs-dna` (Rust)** | time |
+|---|---|---|---|---|
+| E. coli — 200 K slice (cross-check) | 200 000 | 1.9520 | **1.9520** | 0.4 s |
+| **E. coli — full** | 4 641 652 | 1.908 (§49) | **1.9081** | **8.1 s** |
+| **Human chr21 — full** | 40 088 616 | 1.616 (§49) | **1.6255** | **67.6 s** |
+
+**Findings:**
+- **Verified, then scaled.** The port is **bit-exact** against `dna.py` at small scale (1.9520 =
+  1.9520, where the flat table holds no collisions = the exact dict), and reproduces §49's
+  specialist-band numbers **on the full genomes**: E. coli 1.9081 and human chr21 1.6255 (the latter
+  within the flat-collision delta of the Python 1.616). A whole human chromosome — **40 M bases / 80 M
+  bit-predictions — in 68 s** (~0.59 Mbase/s), which `dna.py` could not do (it would take ~11 min).
+- **The native lever is bounded-memory-at-scale, as in §39–41.** Flat hashed tables (obits 23–24) give
+  fixed RAM with near-exact quality; the genome-scale run is what the Rust core exists for.
+- **It confirms the representation thesis on real genomes at scale.** The win over a byte model is the
+  *unit/period* (2-bit base + codon-3) and *reverse-complement* — the bit-native "induce/choose the
+  right representation" lesson, now competitive with domain specialists across a 9× size range
+  (E. coli → human chr21), off a from-scratch English compressor's machinery.
+
+**Significance + honest scope:** the bit-native core is now **natively retargetable and scalable** —
+the same project, two engines (`strong.rs` for byte streams at enwik8 scale, `dna.rs` for genomes at
+chromosome scale), each unit-correct, each bounded-RAM. Honest scope: `dna.rs` is a *faithful* port of
+`dna.py`'s hand-built DNA representation, not an *auto-induced* one — wiring the period/unit *discovery*
+(§52–54, `real_scale.py`) into the native engine so it picks the unit itself is the next step. And text
+at full enwik8 scale via the induced engine (vs the already-native `strong.rs`) remains to be run.
+
+---
+
 ## Appendix — prior-art map (search terms, all bit/discrete, not LLM-specific)
 
 - **Semantic hashing** — learn compact binary codes preserving similarity (the learned "hash").
