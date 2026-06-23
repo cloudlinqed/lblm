@@ -1893,6 +1893,36 @@ GeCo3/JARVIS numbers would sharpen the head-to-head.)
 
 ---
 
+## 49. DNA — base/codon-aware adapter (`dna.py`)
+
+§48's byte-aware result left two fixable weaknesses (byte-misalignment, no DNA-specific structure).
+`dna.py` is a base/codon-aware context-mixing model: it operates on **2-bit bases**, conditions context
+on previous **bases**, adds an explicit **codon phase** (period-3 reading frame), and runs a
+**base-granular VERIFIED match model**. RMSProp-stabilised mixing.
+
+| genome | byte-aware (§48) | base/codon-aware | specialised field | floor |
+|---|---|---|---|---|
+| E. coli (low redundancy) | 1.936 | **1.9145** | ~1.85–1.90 | 2.0 |
+| human chr21 (repetitive) | 1.679 | **1.6438** | ~1.6–1.7 | 2.0 |
+
+**Findings:**
+- Aligning to DNA's natural units (2-bit bases, codon period-3) + a verified base-match model improves
+  **both** genomes over the byte-aware model.
+- **Human chr21 → 1.6438 — solidly inside the specialised DNA-compressor band** (~1.6–1.7,
+  NAF/GeCo3/JARVIS family).
+- E. coli → 1.9145 — at the specialised range (~1.85–1.90) on the hardest (low-redundancy) genome.
+- **Debugging note worth keeping:** the first version was *worse than the floor* (2.0067) because the
+  match model fired on hash **collisions** with high confidence — confident-wrong predictions are
+  catastrophic. **Verifying matches** (comparing the actual preceding bases) fixed it. A real lesson
+  for any confident sub-model: verify before you trust.
+
+**Remaining lever:** reverse-complement modelling (the last DNA-specific structure) would likely push
+E. coli below 1.9 and human below 1.6. The headline: a *targeted base/codon adapter* moved the
+from-scratch core from "generalises off English" to **competitive with specialised DNA compressors of
+the same family** — concrete evidence the architecture models real structure, retargetable per domain.
+
+---
+
 ## Appendix — prior-art map (search terms, all bit/discrete, not LLM-specific)
 
 - **Semantic hashing** — learn compact binary codes preserving similarity (the learned "hash").

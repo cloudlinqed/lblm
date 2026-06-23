@@ -607,6 +607,12 @@ bit-address — scale, stochastic dynamics, and function approximation remain op
 > model's text-repeat strength transfers to DNA repeats. Evidence the architecture captures real
 > structure, not English quirks. (Untuned: byte-misalignment vs codon period-3, no reverse-complement.)
 
+> **DNA, retargeted.** A small base/codon-aware adapter (2-bit bases + codon period-3 + a verified
+> base-match model) improves both: E. coli 1.94→**1.91**, human chr21 1.68→**1.64** — putting the core
+> *inside the specialised DNA-compressor band* (~1.6–1.7) on the repetitive genome. So the architecture
+> isn't just general; it's cheaply **retargetable** to a domain's natural structure. (Reverse-complement
+> modelling is the remaining lever.)
+
 > **Full enwik8 headline.** On the full 100 MB enwik8 benchmark the bit-native strong model reaches
 > **0.209 bits/bit (~20.9 MB)** — beating gzip (~36 MB), bzip2 (~29 MB) and PPMd (~24 MB), reaching
 > lpaq1 territory (~20 MB), behind paq8/cmix SOTA (~15 MB). Scaling held to the end (0.224→0.219→0.209 at

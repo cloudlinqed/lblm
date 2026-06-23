@@ -32,6 +32,7 @@ res_*
 !induce.py
 !invent.py
 !recurse.py
+!dna.py
 !library.py
 !refactor.py
 !datascale.py
