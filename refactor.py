@@ -80,8 +80,13 @@ def synth_enum(task_fn, atoms, n=300, seed=0, max_depth=4, max_streams=8000, max
     return solutions
 
 
+def f_mask(k):
+    return lambda s: [1 if i >= k else 0 for i in range(len(s))]
+
+
 def main():
-    base = [("s", f_atom)]
+    # boundary-aware grammar: add validity masks so EXACT pattern detectors can be built/mined
+    base = [("s", f_atom), ("m1", f_mask(1)), ("m2", f_mask(2)), ("m3", f_mask(3))]
     lib = list(base); seen = set()
     print("Mining validated solving streams (candidate abstractions) per curriculum task:")
     for tn in ["01-parity", "10-parity", "010-parity"]:

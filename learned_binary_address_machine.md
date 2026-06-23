@@ -1850,7 +1850,10 @@ parameterised by the pattern, discovered by anti-unifying analogous solutions �
 typed program synthesis. The "different course" is real and **self-honest at every step**; its crux is
 now precisely located: **parameterised abstraction discovery + boundary handling**, the heart of
 inductive program synthesis (DreamCoder/Stitch territory) and a hard open frontier. No fake success —
-the attempt honestly failed and told us *exactly* why.
+the attempt honestly failed and told us *exactly* why. _(A focused boundary fix — adding validity
+masks `m_k` to the grammar — was also tried: it mined more streams (library of 26) but `0110` still
+NOT FOUND; the synthesis folds masks into new trick-forms rather than clean composable detectors.
+Confirms the wall is parameterised abstraction, not boundary handling alone.)_
 
 ---
 
