@@ -1826,6 +1826,34 @@ problem.
 
 ---
 
+## 47. Path B step — abstraction refactoring: a precise, honest miss (`refactor.py`)
+
+Attempt to fix §46 by **mining** reusable primitives: enumerate the solution space per curriculum task
+and keep every distinct **cross-seed-validated** solving stream as a candidate abstraction (since
+`cnt2(01-detector)` *also* solves 01-parity, the clean detectors should be *in* the solution space).
+Then test `0110` with the enriched library.
+
+**Result:** mined 8 (01-parity), 12 (10-parity), 2 (010-parity) validated solving streams → a
+13-primitive enriched library → `0110-parity` **still NOT FOUND**.
+
+**Why (the precise crux):**
+- The mined abstractions are **boundary-tricks** (transition-XOR forms like `~s^lag1(~s)`), *not* clean
+  detectors. The grammar's zero-fill `lag` **contaminates** clean detection at the edge:
+  `and(~lag1(s), s) = [s[0], 01-det₁, …]` → `cnt2` = `(s[0] + #01) mod 2` ≠ 01-parity. So the **exact**
+  pattern-detectors don't aggregate cleanly; the synthesis finds boundary-trick solutions that pass
+  validation but **don't compose** to deeper patterns.
+- Mining solving streams therefore surfaces tricks, not the reusable detectors `0110` needs.
+
+**Honest conclusion:** cracking the wall needs (a) a **boundary-aware grammar** (so exact pattern
+detection aggregates correctly) and (b) **parameterised abstraction** — a detector *template*
+parameterised by the pattern, discovered by anti-unifying analogous solutions — i.e. higher-order /
+typed program synthesis. The "different course" is real and **self-honest at every step**; its crux is
+now precisely located: **parameterised abstraction discovery + boundary handling**, the heart of
+inductive program synthesis (DreamCoder/Stitch territory) and a hard open frontier. No fake success —
+the attempt honestly failed and told us *exactly* why.
+
+---
+
 ## Appendix — prior-art map (search terms, all bit/discrete, not LLM-specific)
 
 - **Semantic hashing** — learn compact binary codes preserving similarity (the learned "hash").
