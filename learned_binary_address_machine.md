@@ -2436,6 +2436,48 @@ it points the way: a growing **library of induced computations** composed with s
 
 ---
 
+## 61. A reliable, verifiable STRUCTURED RESPONSE — and where the wall really is (`tool.py`)
+
+The honest target is not free prose (a high, scale-bound wall) but a **proper structured response you can
+rely on** — the kind that, in a future view, underlies tool-use. Stripped of that framing: can the core
+turn a request into a **valid tool call that, executed, is correct**, for requests it never saw? Three
+guarantees, all decidable: **valid by construction** (the response is emitted under a grammar
+`op(a, b)`), **correct by induced computation** (executed by the §60 bit-native transducer — add and a
+subtractor, each induced from 60 disjoint examples, so they *compute*), and **verified** (validity and
+correctness measured on held-out requests). Division of labour as the framing doc prescribes: the dumb
+adapter tokenises, the core **routes** the operation and **computes**, the grammar guarantees a
+well-formed response.
+
+| over 2 000 held-out requests | result |
+|---|---|
+| structured response **valid** (parses the grammar) | **100 %** |
+| executed answer **correct** | **100 %** |
+| chat-style **memoriser** (request → answer recall) | **0 %** |
+
+**Findings:**
+- **A response you can rely on is reachable — in the structured/verifiable regime.** The core emits a
+  valid call and the correct answer for numbers it never saw (memoriser: 0 %), because the computation is
+  *induced*, not stored, and the form is *grammar-guaranteed*. This is the trustworthy shape: not "hope
+  the prose is right" but "the response cannot be malformed and the value is checkable."
+- **The wall is words, not compute — shown, not asserted.** Before a fix, valid was 100 % but correct
+  was **82 %**, and *every* error was one phrasing: *"subtract X from Y"* (= Y−X), which the parser got
+  backwards. The computation was flawless; the failure was **language understanding**. Fixing it meant
+  encoding a *words fact* (`"from" ⇒ swap the operands`) — a compute fix would not have helped. The
+  residual difficulty lives exactly where intuition says: in mapping varied language to intent.
+- **Honest scope.** The generalisation that *works* (held-out numbers, 100 %) comes from the induced
+  computation + grammar + copy of the request's fields. The part that is **bounded** is the
+  language-understanding (keyword routing + known phrasings, hand-given here); widening it to open
+  language is the words-wall — solvable only by *learning* many phrasings (scale) or inducing the
+  parse, which is the open frontier.
+
+**Significance:** "a proper response you can rely on" is not blocked by computation — that generalises
+cheaply (§60) and is verifiable. It is gated by **language understanding**, precisely. So the productive
+path is the structured/verifiable regime — valid by grammar, correct by induced rule, knowledge
+separable — where the bit-native core can be *reliable by construction*, and to push it, attack the
+bounded-language-understanding frontier directly rather than chasing free-prose fluency.
+
+---
+
 ## Appendix — prior-art map (search terms, all bit/discrete, not LLM-specific)
 
 - **Semantic hashing** — learn compact binary codes preserving similarity (the learned "hash").

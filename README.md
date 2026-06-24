@@ -126,7 +126,7 @@ RMSProp. See [`ARCHITECTURE.md`](ARCHITECTURE.md), [`FLOW.md`](FLOW.md), and
 
 | File | What it is |
 |---|---|
-| [`learned_binary_address_machine.md`](learned_binary_address_machine.md) | The living design doc — every cycle, result, and verification verdict (60 sections) |
+| [`learned_binary_address_machine.md`](learned_binary_address_machine.md) | The living design doc — every cycle, result, and verification verdict (61 sections) |
 | [`BIT_NATIVE_INTELLIGENCE_FRAMING.md`](BIT_NATIVE_INTELLIGENCE_FRAMING.md) | The thesis (intelligence below language) + an evidence scorecard |
 | [`blm.py`](blm.py) | The original learned-address memory machine (SOM learning, recurrent addresses, latch) |
 | `mix.py` / `mixfast.py` | Online logistic context mixing (the simple model); `mixfast` uses lossless integer keys |
@@ -140,6 +140,7 @@ RMSProp. See [`ARCHITECTURE.md`](ARCHITECTURE.md), [`FLOW.md`](FLOW.md), and
 | `talk.py` | **The framing loop, end to end** — type English → dumb adapter → bit-native core generates by sampling next-bits → English out (§58) |
 | `chat.py` / `make_chat_data.py` | **From continuing to ANSWERING** — strong core (mixing + match-recall) + a Q/A wrapper + a real arithmetic/facts dataset (§59) |
 | `add.py` | **Recall vs GENERATION** — induces the addition computation from 60 sums; 100% on held-out numbers it never saw, vs 0% for a memoriser (§60) |
+| `tool.py` | **Reliable structured response** — request → valid tool call → induced computation; 100% valid + correct on held-out, and the wall is *words*, not compute (§61) |
 | `bench.py` / `region.py` / `multi.py` / `gated.py` / … | The earlier capability probes (memory horizon, recall, latch) |
 
 ## Running it
