@@ -2394,6 +2394,48 @@ honest one — scale the core and the data — not a change of mechanism.
 
 ---
 
+## 60. Recall vs GENERATION — can it produce correct *new* data? (addition, held-out) (`add.py`)
+
+§59 was honest that chat is **recall**: delete a fact and it cannot answer; it memorised the times-table
+and fails `271+314`. The sharp question: can the bit-native core produce **correct outputs for inputs it
+never saw** — i.e. learn a *computation* that generalises, not a table? Addition is the microscope, with
+**held-out accuracy** as the only metric (the discipline §59's chat side lacked).
+
+Representation is the lever: addition is non-local as decimal text, but in **binary, LSB-first** it is a
+1-bit-state transducer — `s_i = f_out(a_i,b_i,carry)`, `carry' = f_upd(a_i,b_i,carry)`. The carry is a
+**hidden** recurrent state; it is **never supplied**. We *induce* both 3-input boolean functions by
+searching the 256×256 transducer space for the one that explains the training sums — Path B's "learn the
+recurrent computation" (cf. §51), applied to a generative task.
+
+| approach | train acc | **held-out acc (3000 unseen sums)** |
+|---|---|---|
+| **memoriser** (key on `(a,b)`, chat-style recall) | 100 % | **0 %** |
+| **induced computation** (1-bit-state transducer) | 100 % | **100 %** |
+
+**Findings:**
+- **It generates correct new data — by induced computation.** From **60** example sums the search finds
+  **exactly one** transducer reproducing them: `out=XOR3` (150), `carry=MAJ3` (232) — *the full adder*.
+  The hidden carry was **induced, not given**. It then computes sums it never saw (`3131+2996=6127`, …)
+  at **100 % held-out**, while the memoriser is at **0 %**. That is the honest, measured **yes** to
+  "can it generate new data" — wherever it induces the *rule*, not the *table*.
+- **It is the representation, again.** The same numbers as decimal text → memorised; as binary
+  bit-columns + a 1-bit state → the rule is inducible and generalises perfectly. "The lever is the
+  representation" (the project's spine) is what separates recall from generation.
+- **Knowledge stays separable — and that is fine.** The core learned a *function* (the adder), not
+  stored answers; facts can live in an external addressable store (the match model is exactly that).
+  A coherent **non-LLM** shape: *induce computations + retrieve knowledge + generate*, rather than
+  memorise everything in weights.
+
+**Significance + honest scope:** this closes the loop on the project's central claim with a number —
+the bit-native core **generates correct novel data when it learns a generalising computation**
+(held-out 100 %), and only recalls when it memorises (held-out 0 %). The honest ceiling: addition is a
+*tiny* rule (1-bit state) induced by *brute* search over a *small* space; complex computations hit the
+Path B search wall (§45), and discovering the right representation automatically is still open. But the
+principle — recall ≠ generation, and induced computation *is* generation — is now proven end-to-end, and
+it points the way: a growing **library of induced computations** composed with separable knowledge.
+
+---
+
 ## Appendix — prior-art map (search terms, all bit/discrete, not LLM-specific)
 
 - **Semantic hashing** — learn compact binary codes preserving similarity (the learned "hash").
