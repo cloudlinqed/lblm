@@ -2354,6 +2354,46 @@ prediction, one bit at a time → the adapter decodes the bits back to English �
 
 ---
 
+## 59. From continuation to ANSWERING — strong core + Q/A + a real dataset (`chat.py`, `make_chat_data.py`)
+
+§58 *continued* a prompt; this *answers* it, by two additions that change the data and the wrapper, not
+the engine. **(#1) A stronger generative core:** online logistic context mixing (byte-aware orders, the
+enwik8 family) **plus a byte match model** — when the recent context matches a span seen in training, it
+*recalls and copies* the continuation (attention-like copy, in bits). **(#2) A Q/A wrapper:** your input
+is formatted `Q: …\nA:` so the model falls into answer-shape, and generation **stops at the next `Q:`**
+for a bounded reply. **(dataset) `make_chat_data.py`** builds a real, correct corpus — exact arithmetic +
+curated true facts (capitals, science, opposites, counting), 4 643 Q/A pairs — the "serious data" lever.
+
+```
+Q: What is the capital of France?  -> A: Paris      Q: What is 7 + 8?     -> A: 15
+Q: How many legs does a spider have? -> A: 8         Q: What is 25 + 17?  -> A: 42
+Q: What is the opposite of hot?    -> A: cold        Q: symbol for water? -> A: H2O
+```
+
+**Findings:**
+- **It answers — correctly — on what it was taught.** Capitals, arithmetic in range, opposites,
+  counting, simple science all come back right, by recall: the long match locks onto the question's tail
+  and copies the answer that followed it in training; the orders supply format and stop. Same next-bit
+  engine as the compressor, run in sample mode — recall is just the match model (compression =
+  prediction = generation = recall).
+- **A real bug, found and fixed (kept honest).** A *single* learned mixer weight for the match went
+  **negative** — on short Q/A data many 16-byte contexts precede different bytes, so the mixer learned to
+  distrust the match. The fix is to trust the match only once it is a **long** span (gate on match
+  length) and steer toward the recalled bit then, rather than mixing it by one global weight.
+- **Honest scope, stated plainly.** This is **recall + format**, not reasoning. Trained questions →
+  correct; **novel** questions → *answer-shaped but wrong/made-up* (`"capital of Mars?" → "10"`,
+  `"123 + 456?" → "30"`) — no generalisation, no arithmetic it didn't memorise, no facts it never saw.
+  The value is the architecture: a bit-native predictor, through a dumb adapter, *answers* — and gets
+  better strictly by (a) **more/cleaner data** (`make_chat_data.py` is the lever) and (b) a **bigger
+  core** (the strong/induced engines). It does not pretend to know what it was not shown.
+
+**Significance:** the framing-doc loop is now not just "speaks" (§58) but "**answers**", with real recall
+over a real dataset — `python chat.py "your question"`. Everything stays bit-level: prediction is the
+substrate, language is the dumb adapter, recall is the match model. The path to "actually smart" is the
+honest one — scale the core and the data — not a change of mechanism.
+
+---
+
 ## Appendix — prior-art map (search terms, all bit/discrete, not LLM-specific)
 
 - **Semantic hashing** — learn compact binary codes preserving similarity (the learned "hash").
