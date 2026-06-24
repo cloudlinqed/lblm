@@ -126,7 +126,7 @@ RMSProp. See [`ARCHITECTURE.md`](ARCHITECTURE.md), [`FLOW.md`](FLOW.md), and
 
 | File | What it is |
 |---|---|
-| [`learned_binary_address_machine.md`](learned_binary_address_machine.md) | The living design doc — every cycle, result, and verification verdict (57 sections) |
+| [`learned_binary_address_machine.md`](learned_binary_address_machine.md) | The living design doc — every cycle, result, and verification verdict (58 sections) |
 | [`BIT_NATIVE_INTELLIGENCE_FRAMING.md`](BIT_NATIVE_INTELLIGENCE_FRAMING.md) | The thesis (intelligence below language) + an evidence scorecard |
 | [`blm.py`](blm.py) | The original learned-address memory machine (SOM learning, recurrent addresses, latch) |
 | `mix.py` / `mixfast.py` | Online logistic context mixing (the simple model); `mixfast` uses lossless integer keys |
@@ -137,6 +137,7 @@ RMSProp. See [`ARCHITECTURE.md`](ARCHITECTURE.md), [`FLOW.md`](FLOW.md), and
 | `induce.py` / `invent.py` / `recurse.py` / `library.py` / `refactor.py` | **Path B** — induction → invention → recursive synthesis → library learning → refactoring (the wall) |
 | `wake_lgg.py` / `m3_different_family.py` / `invent_agg.py` / `stateful.py` | **Path B, cracked** — boundary-aware `detect(P)`, multi-axis generalisation, invented aggregations, invented counter (§50–53) |
 | `real_test.py` / `real_mix.py` / `real_scale.py` | **Path B on real data** — induction on real text/DNA, induce+mix beats gzip, the scaling sweep (§54) |
+| `talk.py` | **The framing loop, end to end** — type English → dumb adapter → bit-native core generates by sampling next-bits → English out (§58) |
 | `bench.py` / `region.py` / `multi.py` / `gated.py` / … | The earlier capability probes (memory horizon, recall, latch) |
 
 ## Running it

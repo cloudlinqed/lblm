@@ -2307,6 +2307,51 @@ representation, don't assume it." The named gap is **robust unit discovery on we
 non-coding streams** (human DNA), where the simple prefix scan is not enough. No fake success: E. coli
 and 11 MB text validate end-to-end, causally; chr21's discovery limitation is reported, not hidden.
 
+_(Detector update: the scan now **skips low-complexity windows** — a telomere / N-run scores near 0,
+trivially compressible — and uses the first representative window, so a non-representative prefix no
+longer misleads it. This preserves text=8 / E. coli=6, but **human chr21 still resolves to p=10**: its
+codon signal is genuinely too weak (mostly non-coding) for a prediction scan to find. Tried prefix,
+middle, multi-window-vote, and representative-window scans; none robustly routes human DNA to base-mode.
+The honest conclusion stands — robust unit discovery on weak-periodicity streams (autocorrelation, a
+base-structure test) is the open problem, and `dna.rs` with the unit hand-given still reaches 1.6255.)_
+
+---
+
+## 58. The loop closes — English in, bit-native generation, English out (`talk.py`)
+
+`BIT_NATIVE_INTELLIGENCE_FRAMING.md` proposes a **bit-native intelligence core with dumb modality
+adapters**: language is an optional I/O codec, prediction is the substrate. This realises that loop
+end-to-end and makes it *visible*: type English → a **dumb adapter** (UTF-8 bytes ↔ bits, no semantics)
+→ the **bit-native core** (a byte-aware next-bit predictor, the same family that compresses enwik8),
+trained on real English, **generates a response by autoregressively sampling the next bit** from its own
+prediction, one bit at a time → the adapter decodes the bits back to English → you read it.
+
+```
+[you]      "It is a truth universally acknowledged that "
+[adapter]  English -> 44 bytes -> 352 bits
+[core]     sampling 220 next-bytes (1760 bits), one bit at a time ...
+[adapter]  bits -> bytes -> English
+[core says] It is a truth universally acknowledged that | there was all this morning at her mother,
+            ... I can remember ... And even a very day after a short survey" her again, and which she
+            countenance, that he should not ...
+```
+
+**Findings:**
+- **The architecture's I/O loop is real, not a diagram.** Trained on *Pride & Prejudice* (real English),
+  the core produces recognisable English continuations — real words, spacing, punctuation, the corpus's
+  voice — purely by predicting and sampling bits, with language living only in the dumb adapter. The same
+  next-bit prediction that *compresses* a stream *generates* one (compression = prediction = generation).
+- **Honest scope (stated plainly).** This is a **byte-level statistical** language model (a high-order
+  n-gram / small char-LM), **not** an instruction-tuned LLM. It does **not reason or answer** — it
+  *continues* the prompt in the corpus's style, with occasional non-text bytes at low temperature. The
+  value is architectural: it demonstrates *intelligence-as-prediction below language*, the framing's
+  central thesis, as a runnable loop — not a capability claim.
+- **It ties the whole project together.** The bit-native predictor — toy benches (§1–42), Path B's
+  induced computations (§43–57), the native engines — is, at bottom, a next-bit model; here that model
+  *speaks*, through a dumb adapter, exactly as the framing proposed. Scaling the core (the strong /
+  induced engines) and training on dialogue would make the continuation more answer-like; the loop itself
+  is now closed and interactive (`python talk.py "your prompt"`).
+
 ---
 
 ## Appendix — prior-art map (search terms, all bit/discrete, not LLM-specific)

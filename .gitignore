@@ -57,6 +57,7 @@ res_*
 !real_test.py
 !real_mix.py
 !real_scale.py
+!talk.py
 data/
 gv_out/
 

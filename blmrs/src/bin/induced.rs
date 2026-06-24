@@ -228,20 +228,36 @@ fn period_score(bits: &[u8], split: usize, end: usize, p: usize) -> f64 {
 }
 
 fn discover_period(bits: &[u8], scan_cap: usize) -> (usize, Vec<(usize, f64)>) {
-    let end = scan_cap.min(bits.len());
-    let split = (end as f64 * 0.8) as usize;
-    let mut best_p = 8usize;
-    let mut best = f64::INFINITY;
-    let mut scan = Vec::new();
-    for p in 2..=12usize {
-        let s = period_score(bits, split, end, p);
-        scan.push((p, s));
-        if s < best {
-            best = s;
-            best_p = p;
+    // Multi-window vote: scan several windows spread across the data, SKIP low-signal (near-constant)
+    // windows — e.g. a telomere/low-complexity prefix — and take the most-voted best period. Robust to
+    // a non-representative start. Falls back to a single prefix scan for small inputs.
+    let total = bits.len();
+    let win = scan_cap.min(total);
+    let split = (win as f64 * 0.8) as usize;
+    let scan_at = |start: usize| -> Vec<(usize, f64)> {
+        let seg = &bits[start..start + win];
+        (2..=12usize).map(|p| (p, period_score(seg, split, win, p))).collect()
+    };
+    // Use the FIRST REPRESENTATIVE window: scan from the start forward and take the first window that
+    // is not low-complexity. A telomere / N-run scores near 0 (trivially compressible); real text ~0.58,
+    // real DNA ~0.97. Skipping low-score windows steps past a non-representative prefix (e.g. chr21).
+    let n_win = if total > win * 6 { 6 } else { 1 };
+    let mut fallback = scan_at(0);
+    for fr in 0..n_win {
+        let start = ((total.saturating_sub(win)) * fr / n_win.max(1)) & !1;
+        let s = scan_at(start);
+        let mn = s.iter().map(|x| x.1).fold(f64::INFINITY, f64::min);
+        if fr == 0 {
+            fallback = s.clone();
         }
+        if mn < 0.30 {
+            continue; // low-complexity window — skip past it
+        }
+        let bp = s.iter().min_by(|a, b| a.1.partial_cmp(&b.1).unwrap()).unwrap().0;
+        return (bp, s);
     }
-    (best_p, scan)
+    let bp = fallback.iter().min_by(|a, b| a.1.partial_cmp(&b.1).unwrap()).unwrap().0;
+    (bp, fallback)
 }
 
 /// The induced engine at a fixed period p. Returns (whole, last-20%, cost-over-first-`cost_chk`-bits).
