@@ -2228,6 +2228,49 @@ at full enwik8 scale via the induced engine (vs the already-native `strong.rs`) 
 
 ---
 
+## 56. The period-DISCOVERING native engine — induction at scale (`blmrs/src/bin/induced.rs`)
+
+§55's honest gap was that `dna.rs` is a *hand-built* DNA representation. This closes it: the period/unit
+*discovery* (§52–54, `real_scale.py`) is wired into the native core. `induced.rs` runs a quick held-out
+**period scan** to discover the predictive unit `p` from the data, then runs unit-aligned online logistic
+context mixing at `p` (integer rolling keys + `strong.rs`-style bounded-RAM flat tables + the 33-knot
+APM). It is **not told the unit** — it discovers the byte on text and the codon on DNA.
+
+**Comprehensive test battery (all pass):**
+
+| test | result |
+|---|---|
+| period discovery | English text → **p=8** (byte); source code → **p=8**; 2-bit DNA → **p=6** (codon) — auto-discovered |
+| correctness vs Python (`real_scale.py`, same params) | text Δ**0.0005** (0.2625 vs 0.2620); DNA Δ**0.0002** (0.9769 vs 0.9767) — matches within stretch-LUT/float noise |
+| **causality** (future-bit-flip) | **PASS** — both streams processed in full; flipping a bit *after* the checkpoint leaves the prefix cost bit-identical (no look-ahead) |
+| determinism | **PASS** — identical output across runs |
+| edge case (5-byte input) | handled, no panic |
+| scale + gzip (text 2 MB) | **0.2358** bits/bit vs gzip 0.3607 (+0.125) |
+| **DNA full E. coli genome** | auto-p=6 → **0.9564 bits/bit = 1.913 bits/base** (last-20%) vs gzip 1.984 |
+
+**Findings:**
+- **The representation is induced natively, at scale.** The engine discovers the unit (byte / codon)
+  from a held-out scan and predicts unit-aligned — verified against the Python reference to ≤0.0005,
+  causal (future-bit-flip), deterministic, and beating gzip on both text and genome.
+- **Discovery ≈ hand-building, without the priors.** On the full E. coli genome the *induced* engine
+  reaches **1.913 bits/base by discovering the codon (p=6) alone** — essentially the hand-built `dna.rs`
+  specialist's **1.908**, but with **no codon/reverse-complement prior supplied**. The "learn what to
+  compute / induce the representation" thesis, native and at genome scale.
+- **A real, named scan subtlety (fixed).** The period scan must use a **small** window: on a large
+  window long periods win by *context length* (more conditioning bits), not true periodicity — on the
+  near-random genome that pushed the pick to p=10. An 80 k-bit scan (matching `real_scale.py`) restores
+  the true unit (codon p=6); reported, not hidden.
+
+**Significance + honest scope:** the bit-native core now *induces* its representation in the native
+engine — `induced.rs` is general (one engine, period discovered per stream) and validated by a full
+test battery. Honest scope: it is the unit-discovery + mixer core, **without** `dna.rs`'s
+reverse-complement/match models, so on DNA it sits just shy of the tuned specialist (1.913 vs 1.908) and
+on text just shy of `strong.rs`'s match/high-order machinery; folding those into the induced engine, and
+running it at full enwik8 / whole-chromosome scale, is the remaining work. The thesis stands
+empirically: **the right unit can be discovered, not assumed — natively, causally, at scale.**
+
+---
+
 ## Appendix — prior-art map (search terms, all bit/discrete, not LLM-specific)
 
 - **Semantic hashing** — learn compact binary codes preserving similarity (the learned "hash").
