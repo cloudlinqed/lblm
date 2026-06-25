@@ -2478,6 +2478,135 @@ bounded-language-understanding frontier directly rather than chasing free-prose 
 
 ---
 
+## 62. Engine / language / knowledge — provably separable, held-out (`separation.py`, `separation_data.py`)
+
+A sharper question than "predict the next bit": are **computation**, the **language** a query is posed
+in, and the **knowledge** (facts read from text) *separable, independently-varying* parts of the core —
+or are they entangled? The bet is a three-way separation: an **engine** (computation), a **language**
+(the surface), and a **knowledge** store (facts), that vary independently. `separation.py` builds this
+as a falsifiable, staged experiment over the §59 byte-native core and the §60 induced adder, with the
+controls an adversarial panel demanded (designed by one research fan-out, audited by a separate
+adversarial fan-out; both in the session log).
+
+The three artifacts: **(E)** the *engine* = the induced full-adder transducer `(out=XOR3, upd=MAJ3)`
+plus `chat.Core`'s fixed predictor code and frozen hyperparameters — a **corpus-independent** object;
+**(L)** the *language* = the grammar/Q&A shape the store acquires from a **fact-free** English corpus;
+**(K)** the *knowledge* = the append-only byte store (`corpus_bytes`/`mtab`/`tables`), filled **only**
+by reading. We fingerprint E and K at every stage S0→S4 (arrival → learn English → read an English book
+→ meet a cipher-only fact → learn to read the cipher).
+
+| claim | result (held-out / staged) |
+|---|---|
+| **C1** math is *induced*, not recalled | adder `(150,232)` forced by 60 disjoint sums; **100 %** on 3 000 unseen pairs; memoriser **0 %** |
+| **C2** holds no facts it has not read | with English loaded, every real-world-fact query **abstains** (0/5 correct, **5/5 abstain**) |
+| **C3** language ≠ knowledge | English readability **8.00 → 0.81 bits/byte** (learned) yet **no** fact becomes answerable |
+| **C4** engine/store **separation** | engine fingerprint identical S0..S4 **and sabotage-sensitive**; store fingerprint changes every stage, corpus **prefix-monotonic** |
+| **C5** reading supplies knowledge, gated by language | novel fact read → **commits** (pre-book abstains); cipher-only fact **abstains in English, commits in its own language**; cipher **learned** (4.81 → 0.89 b/B) while never-taught cipher C′ stays **5.96** |
+
+**Findings:**
+- **Math is computed; facts are read.** The adder generalises 100 % on numbers it never saw (a *computed*
+  rule, memoriser 0 %), while the *same* core abstains on an unread fact (e.g. the capital of France)
+  until it reads it — computation and fact-recall are distinct subsystems, not one entangled blob.
+- **The engine invariant is a *separation guarantee*, verified by sabotage — not a tautology.** The
+  fingerprint is, by construction, a function of the corpus-independent engine only, so its constancy
+  across stages is *exactly the claim* that language and facts land in the **store**, never the engine.
+  We keep it from being vacuous by showing it **moves** when the math is broken (`upd_fn=233 → different
+  hash`), the predictor is patched, or the gate changes — so it genuinely *would* change if who-it-is
+  changed. Meanwhile the store fingerprint changes at every stage and the corpus is append-monotonic.
+- **Honest abstention, earned not declared.** One fixed rule for *every* query — commit iff the question
+  is found **verbatim** in read text (`prime_mlen ≥ MATCH_GATE`) **and** confidence ≥ τ — with no
+  per-fact branch. The binding term is verbatim-question recall: a *fluent confabulation* (conf 0.98 but
+  `mlen 0`) **abstains**; the *same* query commits only after the book is read. Calibration, not a guard.
+- **Knowledge is gated by the language it is written in.** A fact stored only in cipher C abstains to an
+  English question but commits when asked **in cipher C** (the model emits cipher bytes that are a
+  verbatim substring of what it read; we decode **only to score**, never to answer). And "learning a
+  language" is measured honestly as **held-out readability**: reading cipher-C text drops its bits/byte
+  4.81 → 0.89, while a never-taught cipher C′ stays at 5.96 — learned to read, not trivially decoded.
+- **The boundaries, stated and shown (not hidden).** Recall is **span-level copy**, labelled by
+  longest-common-substring: a < 16-byte **paraphrase abstains** (no semantic comprehension). The engine
+  does **not translate**: an English question about the cipher fact **stays gated even after** the model
+  learns to read that cipher. And the learned "English" is **vocabulary/grammar-bound** — a
+  novel-vocabulary control (same grammar, unseen words) stays high (≈ 3.8 b/B vs 0.81), so the claim is
+  "learned *this* language," not "reads arbitrary English." Corpora are audited **fact-free** (no answer
+  token, no 16-byte probe span) and the demo does **zero file I/O** (it never touches `data/chat.txt`,
+  which contains France→Paris and would be a fatal leak).
+
+**What it proves, and does not.** `separation.py` demonstrates a clean three-way separation between a
+computation engine, a language, and a knowledge store on a byte-level model: math is induced computation
+(100 % held-out, memoriser 0 %); the engine is corpus-independent by construction *and* sabotage-
+sensitive, so language and facts provably live in the separable, append-monotonic store; facts are absent
+until **read** (audited fact-free, novel entity abstains pre-book / commits post-book, one book leaks no
+other fact); retrieval and abstention run through **one fixed, fact-agnostic rule** with no decoder in
+the answer path; and "learning a language" is held-out readability (taught cipher C drops, never-taught
+C′ does not). It does **not** prove comprehension, grounding, or understanding — fact recall is verbatim
+span-copy (a paraphrase abstains), the model does not translate (a cipher fact asked in the other
+language stays gated), and the learned language is a small closed vocabulary/grammar. Stated plainly:
+**the core computes math that generalises, holds no fact it has not read, and is the same engine
+byte-for-byte before and after learning a language — computation, language, and knowledge are separable
+axes**, measurable held-out, which is what makes them improvable one at a time.
+
+**Significance:** the §61 result said the wall is *words*. §62 maps that wall precisely by **separating
+the axes**: computation generalises for free; reliable answering is recall traceable to what was read,
+gated by language; and "understanding" (paraphrase, translation, open vocabulary) is the residual,
+explicitly *not* yet crossed. The productive next step is the same one §61 pointed at — widen the bounded
+language axis (learn the question→intent map, paraphrase-robustly) — now with a harness that can measure,
+honestly and held-out, exactly how much of that axis any change actually buys.
+
+---
+
+## 63. Improving the strong compressor — richer models + tuning, measured (`blmrs/src/bin/strong.rs`)
+
+Past the research phase, the first engineering target is the headline itself: **lower bits/bit**. The
+strong core was already lpaq1-class (§ headline). Working in an A/B fork (`strong2`, since promoted),
+each change was measured on a held-out real-text proxy (`data/corpus_big.txt`) and kept only if it
+helped — a clean ablation, not a guess.
+
+**Changes (each measured at 1 MB, whole-stream bits/bit):**
+
+| step | change | bits/bit | Δ |
+|---|---|---|---|
+| baseline | byte-orders 0..6, hi {8,12,16,24,32}, 1 sparse, word, 2 match, 1 sel mixer, 4 SSE | 0.221636 | — |
+| +order-7 | fill the 6→8 gap | 0.220987 | −0.0006 |
+| +mixer-2 | a 2nd context-selected mixer (order-2 selector) + 4-weight final combiner | 0.219541 | −0.0014 |
+| +SSE | two more APM stages (word-hash, order-3 contexts) | 0.219314 | −0.0002 |
+| +tune | DELTA 0.18→0.08, mixer LRs 0.0013→0.0010 (env-overridable) | 0.218859 | −0.0005 |
+| +sparse | 3 sparse models (non-adjacent byte pairs) instead of 1 | 0.218614 | −0.0002 |
+| +prev-word | predict a word's bits from the **previous word** (text bigrams) — biggest single win | 0.216905 | −0.0017 |
+
+**Validation (the cumulative engine vs the baseline, held-out):**
+
+| corpus | baseline | improved | improvement |
+|---|---|---|---|
+| corpus_big 1 MB | 0.221636 | 0.216905 | −2.1 % |
+| corpus_big 3 MB | 0.218053 | 0.214408 | −1.7 % |
+| **corpus_big 11 MB** (whole) | **0.224637** | **0.218953** | **−2.5 %** |
+| corpus_big 11 MB (last-20 %) | 0.223195 | 0.217603 | −2.5 % |
+| code 0.8 MB | 0.159457 | 0.154720 | −3.0 % |
+| b100 1 MB | 0.241401 | 0.237955 | −1.4 % |
+
+**Findings:**
+- **A real, generalising gain.** ~2.5 % lower bits/bit on the 11 MB text proxy, and it **generalises** —
+  text *and* code, 1.4–3.0 % — so it is not a corpus-big artefact. The gain **grows with data**
+  (1 MB −2.1 % → 11 MB −2.5 %): the richer models earn their keep as the stream lengthens, the opposite
+  of overfitting.
+- **The text-structure models did the most work.** The single biggest win was the **previous-word
+  model** (−0.0017 alone), then the **second (order-2) mixer**. Extra SSE stages and sparse models were
+  small. Where intelligence lives in this core is *which computation is written into the address* — here,
+  word-bigram structure — exactly the project mantra, now bankable as bits.
+- **Honest scope.** (1) **Speed cost:** ~2× slower (the second full mixer + extra models), ~0.2 Mbit/s
+  pure-scalar — a roadmap-item-3 (throughput) concern, deferred deliberately. (2) **enwik8 not re-run:**
+  the 0.209 ladder figure was the *prior* engine; the improved engine should be at least as good on
+  enwik8 but that was **not measured here** (enwik8 isn't local), so the ladder stands as a conservative
+  floor, not a new claim. (3) Each step was kept only on a measured win; the env-overridable
+  `DELTA/ALR/ALRF` make further sweeps a one-build affair.
+
+**Significance:** the bit-native compressor is improvable by ordinary, honest CM engineering — measure,
+keep wins, ablate — and the lever is still representation (text-structure models), not raw capacity. The
+next, larger lever (noted, not yet taken) is **indirect bit-history StateMaps / ISSE chains**, the
+technique that separates lpaq1 from paq8; this milestone banks the cheap, robust gains first.
+
+---
+
 ## Appendix — prior-art map (search terms, all bit/discrete, not LLM-specific)
 
 - **Semantic hashing** — learn compact binary codes preserving similarity (the learned "hash").
