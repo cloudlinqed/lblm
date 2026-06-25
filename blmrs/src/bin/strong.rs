@@ -1,19 +1,20 @@
 //! blmrs strong — the strong bit-native context-mixing predictor (extends the `mixnsfast.py` port).
 //!
 //! Models: byte-orders 0..7, hashed high orders {8,12,16,24,32}, 3 sparse models (non-adjacent byte
-//! pairs), a word model + a previous-word model (text bigrams), and two byte-match models (min len
-//! 5 and 8). These feed TWO context-selected logistic mixers (selected by order-1 and by order-2)
-//! plus a global mixer, combined by a 4-weight final mixer, then a chain of 6 SSE/APM stages
-//! (prev-byte, order-2, partial-byte, match-length, word-hash, order-3 contexts). Non-stationary
-//! count recency-halving + RMSProp adaptive learning. Orders/sparse/word use flat fixed-size
-//! open-addressing tables (high-bit multiplicative hash + 8-bit checksum tags) -> bounded memory;
-//! the high orders use merged hashed tables.
+//! pairs), a word model + a previous-word model (text bigrams), two byte-match models (min len 5/8),
+//! and 5 INDIRECT context models (orders 2..6): each maps an order-K context's bit-HISTORY byte to an
+//! adaptive StateMap, a nonstationary prediction the raw counts miss (the ISSE/ICM idea). These feed
+//! TWO context-selected logistic mixers (selected by order-1 and by order-2) plus a global mixer,
+//! combined by a 4-weight final mixer, then a chain of 6 SSE/APM stages (prev-byte, order-2,
+//! partial-byte, match-length, word-hash, order-3 contexts). Non-stationary count recency-halving +
+//! RMSProp adaptive learning. Orders/sparse/word use flat fixed-size open-addressing tables (high-bit
+//! multiplicative hash + 8-bit checksum tags) -> bounded memory; the high orders use merged hashed tables.
 //!
 //! History: started as a faithful port of `mixnsfast.py` (verified bit-equal at small scale), then
 //! improved — order-7, a 2nd (order-2) mixer, +2 SSE stages, +2 sparse models, the previous-word
-//! model, and tuned DELTA/learning-rates — for ~2.5% lower bits/bit on real text (measured 11 MB,
-//! see learned_binary_address_machine.md §63). Hyperparameters DELTA/ALR/ALRF are env-overridable.
-//! Usage: strong <path> [byte_cap] [obits].
+//! model, tuned DELTA/learning-rates, and the indirect (ICM/StateMap) models — for ~3.4% lower bits/bit
+//! on real text (measured 11 MB, see learned_binary_address_machine.md §63). DELTA/ALR/ALRF are
+//! env-overridable. Usage: strong <path> [byte_cap] [obits].
 
 use std::env;
 use std::fs;
@@ -25,7 +26,9 @@ const NH: usize = 5;
 const NM: usize = 8;
 const NSP: usize = 3; // sparse models over non-adjacent byte pairs (offsets below)
 const SPOFF: [(usize, usize); NSP] = [(2, 3), (1, 4), (3, 6)];
-const NIN: usize = NM + NH + NSP + 4; // [orders][hi orders][sparse..][word][word2][match][match2] then bias
+const NICM: usize = 5;               // indirect context models (bit-history -> adaptive StateMap)
+const ICM_K: [usize; NICM] = [2, 3, 4, 5, 6]; // which ORDERS positions get an ICM
+const NIN: usize = NM + NH + NSP + 4 + NICM; // [orders][hi][sparse..][word][word2][match][match2][icm..] bias
 const NW: usize = NIN + 1; // mixer weights (inputs + bias)
 const NSEL: usize = 8 * 256;
 const HBITS: u32 = 22;
@@ -209,6 +212,13 @@ fn main() {
 
     let mut sts = [0.0f64; NW];
     let mut oslot = [0usize; NM];
+    let mut oreset = [false; NM];
+    // indirect context models: per-context bit-history byte + an adaptive StateMap over the 256 histories
+    let mut icm_bh: Vec<Vec<u8>> = (0..NICM).map(|_| vec![0u8; osize]).collect();
+    let mut sm_p: Vec<[f64; 256]> = (0..NICM).map(|_| [0.5f64; 256]).collect();
+    let mut sm_n: Vec<[u32; 256]> = (0..NICM).map(|_| [0u32; 256]).collect();
+    let mut icm_bv = [0usize; NICM];
+    let mut icm_ti = [0usize; NICM];
     let mut hslot = [0usize; NH];
     let mut hbase = [0u64; NH];
     let mut sp_slot = [0usize; NSP];
@@ -233,7 +243,8 @@ fn main() {
             let h = key.wrapping_mul(MULT);
             let ti = (h >> (64 - obits)) as usize;
             let want = ((h >> (64 - obits - 8)) & 0xFF) as u8;
-            if otag[k][ti] != want { otag[k][ti] = want; ocount[k][2 * ti] = 0; ocount[k][2 * ti + 1] = 0; }
+            oreset[k] = otag[k][ti] != want;
+            if oreset[k] { otag[k][ti] = want; ocount[k][2 * ti] = 0; ocount[k][2 * ti + 1] = 0; }
             oslot[k] = ti;
             let (n0, n1) = (ocount[k][2 * ti] as f64, ocount[k][2 * ti + 1] as f64);
             sts[k] = stretch((n1 + delta) / (n0 + n1 + d2));
@@ -287,6 +298,15 @@ fn main() {
         }
         sts[NM + NH + NSP + 2] = mm.predicted(&hist, phase, byte_pos);
         sts[NM + NH + NSP + 3] = mm2.predicted(&hist, phase, byte_pos);
+        // indirect context models: the order-K context's bit-HISTORY (recency, not just counts)
+        // indexes an adaptive StateMap -> a nonstationary prediction (the ISSE/ICM idea)
+        for c in 0..NICM {
+            let ti = oslot[ICM_K[c]];
+            if oreset[ICM_K[c]] { icm_bh[c][ti] = 0; }
+            let bv = icm_bh[c][ti] as usize;
+            icm_bv[c] = bv; icm_ti[c] = ti;
+            sts[NM + NH + NSP + 4 + c] = stretch(sm_p[c][bv]);
+        }
         sts[NIN] = 1.0;
 
         let sel = ((phase << 8) | prev_byte as usize) & (NSEL - 1);
@@ -369,6 +389,14 @@ fn main() {
             let s = 2 * oslot[k];
             ocount[k][s + yi] += 1;
             if ocount[k][s + yi] >= CLIMIT { ocount[k][s] = (ocount[k][s] + 1) >> 1; ocount[k][s + 1] = (ocount[k][s + 1] + 1) >> 1; }
+        }
+        // ICM: adapt the StateMap toward y at the observed history, then shift y into the history byte
+        for c in 0..NICM {
+            let bv = icm_bv[c];
+            let pr = sm_p[c][bv];
+            sm_p[c][bv] = pr + (yf - pr) / (sm_n[c][bv] as f64 + 1.5);
+            if sm_n[c][bv] < 1023 { sm_n[c][bv] += 1; }
+            icm_bh[c][icm_ti[c]] = (((bv << 1) | yi) & 0xFF) as u8;
         }
         for j in 0..NSP {
             let s = 2 * sp_slot[j]; spc[j][s + yi] += 1;

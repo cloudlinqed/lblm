@@ -2572,38 +2572,46 @@ helped — a clean ablation, not a guess.
 | +tune | DELTA 0.18→0.08, mixer LRs 0.0013→0.0010 (env-overridable) | 0.218859 | −0.0005 |
 | +sparse | 3 sparse models (non-adjacent byte pairs) instead of 1 | 0.218614 | −0.0002 |
 | +prev-word | predict a word's bits from the **previous word** (text bigrams) — biggest single win | 0.216905 | −0.0017 |
+| +ICM | 5 **indirect** models (orders 2–6): bit-history byte → adaptive StateMap (nonstationary) | 0.216588 | −0.0003¹ |
 
-**Validation (the cumulative engine vs the baseline, held-out):**
+¹ ICM looks tiny at 1 MB but **scales hard**: −0.0026 at 3 MB and −0.0019 at 11 MB (whole) — it earns its
+keep only once contexts accumulate bit-history (see the validation rows). On code it is the dominant win.
+
+**Validation (the cumulative engine — all of the above incl. ICM — vs the original baseline, held-out):**
 
 | corpus | baseline | improved | improvement |
 |---|---|---|---|
-| corpus_big 1 MB | 0.221636 | 0.216905 | −2.1 % |
-| corpus_big 3 MB | 0.218053 | 0.214408 | −1.7 % |
-| **corpus_big 11 MB** (whole) | **0.224637** | **0.218953** | **−2.5 %** |
-| corpus_big 11 MB (last-20 %) | 0.223195 | 0.217603 | −2.5 % |
-| code 0.8 MB | 0.159457 | 0.154720 | −3.0 % |
-| b100 1 MB | 0.241401 | 0.237955 | −1.4 % |
+| corpus_big 1 MB | 0.221636 | 0.216588 | −2.3 % |
+| corpus_big 3 MB | 0.218053 | 0.211762 | −2.9 % |
+| **corpus_big 11 MB** (whole) | **0.224637** | **0.217011** | **−3.4 %** |
+| corpus_big 11 MB (last-20 %) | 0.223195 | 0.214899 | −3.7 % |
+| code 0.8 MB | 0.159457 | 0.150989 | **−5.3 %** |
+| b100 1 MB | 0.241401 | 0.236463 | −2.0 % |
 
 **Findings:**
-- **A real, generalising gain.** ~2.5 % lower bits/bit on the 11 MB text proxy, and it **generalises** —
-  text *and* code, 1.4–3.0 % — so it is not a corpus-big artefact. The gain **grows with data**
-  (1 MB −2.1 % → 11 MB −2.5 %): the richer models earn their keep as the stream lengthens, the opposite
-  of overfitting.
-- **The text-structure models did the most work.** The single biggest win was the **previous-word
-  model** (−0.0017 alone), then the **second (order-2) mixer**. Extra SSE stages and sparse models were
-  small. Where intelligence lives in this core is *which computation is written into the address* — here,
-  word-bigram structure — exactly the project mantra, now bankable as bits.
-- **Honest scope.** (1) **Speed cost:** ~2× slower (the second full mixer + extra models), ~0.2 Mbit/s
-  pure-scalar — a roadmap-item-3 (throughput) concern, deferred deliberately. (2) **enwik8 not re-run:**
-  the 0.209 ladder figure was the *prior* engine; the improved engine should be at least as good on
-  enwik8 but that was **not measured here** (enwik8 isn't local), so the ladder stands as a conservative
-  floor, not a new claim. (3) Each step was kept only on a measured win; the env-overridable
-  `DELTA/ALR/ALRF` make further sweeps a one-build affair.
+- **A real, generalising gain that grows with data.** −3.4 % bits/bit on the 11 MB text proxy (−3.7 % on
+  the warmed-up last-20 %), and it **generalises** — text *and* code, 2.0–5.3 % — so it is no
+  corpus-big artefact. The gain **grows with scale** (1 MB −2.3 % → 11 MB −3.4 %): richer models earn
+  their keep as the stream lengthens — the opposite of overfitting.
+- **Two kinds of win.** (a) *Direct structure*: the **previous-word model** (−0.0017 at 1 MB) and the
+  **second (order-2) mixer** — text-bigram structure written into the address, the project mantra,
+  bankable as bits. (b) *Indirect / nonstationary*: the **ICM/StateMap** models — a context's bit-HISTORY
+  (recency, not just totals) indexes an adaptive map — which is the lever that **scales** (−0.15 % at
+  1 MB but **−1.2 % at 3 MB**, and **−5.3 % cumulative on code**, where repeated structure makes the
+  history maximally informative).
+- **Honest scope.** (1) **Speed cost:** ~2–3× slower (second full mixer + ICMs + extra models),
+  ~0.15 Mbit/s pure-scalar — a roadmap-item-3 (throughput) concern, deferred deliberately. (2) **enwik8
+  not re-run:** the 0.209 ladder figure was the *prior* engine; the improved engine should be at least as
+  good but that was **not measured here** (enwik8 isn't local), so the ladder stands as a conservative
+  floor, not a new claim. (3) Every step kept only on a measured win; `DELTA/ALR/ALRF` are env-overridable
+  for one-build sweeps.
 
 **Significance:** the bit-native compressor is improvable by ordinary, honest CM engineering — measure,
-keep wins, ablate — and the lever is still representation (text-structure models), not raw capacity. The
-next, larger lever (noted, not yet taken) is **indirect bit-history StateMaps / ISSE chains**, the
-technique that separates lpaq1 from paq8; this milestone banks the cheap, robust gains first.
+keep wins, ablate. Two levers paid off: representation (text-structure models) and **indirect bit-history
+StateMaps** (the ICM/ISSE family that separates lpaq1 from paq8), the latter scaling with data. The ICM
+here is the *flat-input* form (bit-history → StateMap → mixer input); the remaining headroom is the
+*chained* ISSE form (each order refining the previous prediction) plus a richer state machine and ICMs on
+the word/high-order contexts — the next push on this axis.
 
 ---
 

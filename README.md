@@ -34,9 +34,9 @@ Where that lands on the enwik8 ladder (approximate compressed sizes):
 
 A from-scratch bit-native predictor **beats gzip, bzip2, and PPMd** and reaches **lpaq1 territory** — and
 quality kept improving with data right to the full file (0.224 → 0.219 → 0.209 at 10 → 30 → 100 MB).
-*(The engine was since improved — §63: richer text-structure models + tuning give **~2.5 % lower bits/bit**
-on an 11 MB text proxy, measured and generalising to code; enwik8 wasn't re-run, so the 0.209 figure is a
-conservative floor for the current engine.)*
+*(The engine was since improved — §63: richer text-structure models, tuning, and indirect bit-history
+StateMaps (ICM) give **~3.4 % lower bits/bit** on an 11 MB text proxy (and up to ~5 % on code), measured;
+enwik8 wasn't re-run, so the 0.209 figure is a conservative floor for the current engine.)*
 Not SOTA (that needs far more models + GB-scale tuned memory + cache-aware engineering), but a real,
 defensible result for a predictor built from first principles. Compression = prediction = learning:
 this is the bit-native analogue of an LLM's perplexity, on real data.
