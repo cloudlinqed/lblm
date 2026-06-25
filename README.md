@@ -145,7 +145,7 @@ RMSProp. See [`ARCHITECTURE.md`](ARCHITECTURE.md), [`FLOW.md`](FLOW.md), and
 | `add.py` | **Recall vs GENERATION** — induces the addition computation from 60 sums; 100% on held-out numbers it never saw, vs 0% for a memoriser (§60) |
 | `tool.py` | **Reliable structured response** — request → valid tool call → induced computation; 100% valid + correct on held-out, and the wall is *words*, not compute (§61) |
 | `separation.py` / `separation_data.py` | **Engine / language / knowledge separation** — math generalises (computed, not recalled); facts are absent until *read*; the engine is corpus-independent by construction *and* sabotage-sensitive (§62) |
-| `intent.py` | **The words wall, measured** — a *learned* question→intent router (logistic over binary word/char features) generalises to unseen phrasings/word-forms where hand-coded routing can't; the residual wall is true synonyms (§64) |
+| `intent.py` | **The words wall, mapped** — a *learned* question→intent router (logistic over binary word/char features) generalises across sentence structure (+ unseen word *forms* via char n-grams; a fair stem hand-coder matches that); true *synonyms* stay at chance — the wall measured, not yet crossed (§64) |
 | `bench.py` / `region.py` / `multi.py` / `gated.py` / … | The earlier capability probes (memory horizon, recall, latch) |
 
 ## Running it

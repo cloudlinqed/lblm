@@ -2615,46 +2615,53 @@ the word/high-order contexts — the next push on this axis.
 
 ---
 
-## 64. The first bite out of the words wall — a LEARNED question→intent router (`intent.py`)
+## 64. A first probe at the words wall — a LEARNED question→intent router (`intent.py`)
 
-Roadmap item 2 is *capability*, and §61/§62 already named its wall: **words** — mapping a varied phrasing
-to the right intent. `tool.py` routed with **hand-coded** keywords (`"plus" ⇒ add`), brittle by
-construction. §64 replaces that with a **learned** map and tests the only thing that matters:
-generalisation to phrasings never seen — across **three honesty tiers**.
+Roadmap item 2 is *capability*, and §61/§62 named its wall: **words** — mapping a varied phrasing to the
+right intent. `tool.py` routed with **hand-coded** keywords (`"plus" ⇒ add`). §64 replaces that with a
+**learned** map (online multiclass logistic — the compressor's own stretch/squash unit — over binary
+features: word tokens, operator symbols, numbers masked to `NUM`, char 3-grams) and measures, honestly,
+*how far it generalises* across three template-disjoint tiers, over **8 seeds** (mean, min–max).
 
-The model is bit-native in lineage: the request becomes a vector of **binary features** (which word
-tokens / operator symbols are present, numbers masked to a `NUM` token, plus char 3-grams), and a small
-**online logistic** unit — the same stretch/squash primitive the compressor mixes with — is trained by
-SGD to predict the intent (add / sub / mul). Train and every test tier are **template-disjoint**.
+> **Honesty note.** A first cut of this section over-claimed and was corrected after an adversarial
+> red-team (the project's standing practice): its HARD tier *leaked* verbatim training words, and its
+> hand-coded baseline was a *strawman* (whole-word match). Both are fixed below — HARD now contains only
+> word forms that are **not** whole training words (asserted in code), and a **fair stem-substring**
+> hand-coder is reported alongside. The numbers and the claim are the corrected ones.
 
 | router | train | EASY¹ | HARD² | NOVEL³ |
 |---|---|---|---|---|
-| hand-coded (`tool.py` style) | 88.9 % | 86.7 % | 83.3 % | 16.7 % |
-| learned (words only) | 100 % | 100 % | 75.0 % | 50.0 % |
-| **learned (words + char n-grams)** | **100 %** | **100 %** | **100 %** | 50.0 % |
+| hand-coded, whole-word (`tool.py`) | 77.8 | 86.7 | 0.0 | 5.6 |
+| hand-coded, **fair stem-substring** | 94.4 | 93.3 | **91.7** | 0.0 |
+| learned (words only) | 100 | 100 | 44.8 | 42.4 |
+| **learned (words + char n-grams)** | **100** | **100** | **97.9** | 38.2 |
+| learned (words + char, stop-words stripped) | 100 | 100 | 96.9 | 42.4 |
 
-¹ EASY = new sentence structure, same key words (plus/minus/times).  ² HARD = unseen word *forms*
-(added, subtracting, multiplied) — share substrings, not whole words.  ³ NOVEL = true synonyms
-(combine, deduct, scale) — share **nothing** with training.
+(mean % over 8 seeds.)  ¹ EASY = new sentence *structure*, same key words.  ² HARD = unseen word *forms*
+(`added`, `subtracting`, `multiplied`) — share stem *substrings*, **no** whole training word (verified).
+³ NOVEL = true *synonyms* (`combine`, `deduct`, `scale`) — share no discriminative word with training.
 
-**Findings:**
-- **Routing is now learned and generalises.** 100 % on unseen sentence *structure*, and — once **char
-  n-grams** let unseen word *forms* fire shared sub-word features — 100 % on HARD, where `multiplied`
-  reaches `mul` though only `multiply`/`times`/`product` were ever seen. The hand-coded router is capped
-  by its fixed keyword list.
-- **The residual wall, stated not hidden.** True **synonyms** with no shared word or substring
-  (`deduct`, `combine`, `scale`) sit at **50 %** — barely above the 33 % three-class floor (what little
-  lift there is comes from incidental cues like the word `from` learnt as a sub feature). Surface
-  features cannot cross a pure semantic gap.
-- **Where the wall goes next.** Bridging NOVEL needs **learned word *meaning***, not more surface
-  features — i.e. exactly §62's "reading": let words acquire distributional representations from a
-  corpus (the compressor already learns such structure), then route over those. That is the next step
-  on this axis, and it connects item 2 back to the core predictor rather than bolting on an LLM.
+**Findings (corrected, multi-seed):**
+- **Routing is learned, and generalises across sentence structure.** EASY = **100 %** on every seed —
+  no hand-tuned keyword list, robust to new phrasings built from known words.
+- **Char n-grams give a *real* lift on unseen word forms.** On the de-leaked HARD tier, words-only scores
+  **44.8 %** but words+char-grams **97.9 %** — sub-word features genuinely bridge `multiplied`→`mul`,
+  `subtracting`→`sub`. This is the one solid generalisation result beyond structure.
+- **But this is *not* a win over fair hand-coding.** A reasonable **stem-substring** hand-coder also
+  solves HARD (**91.7 %**). So the learned router's value is *"no keyword hand-tuning"* (it discovered
+  the stems from data), **not** a capability hand-coding lacks. The earlier "generalises where hand-coded
+  cannot" claim was false and is retracted.
+- **The synonym wall is NOT climbed.** True synonyms (NOVEL) sit at **≈38 %** — at the **33 % three-class
+  chance floor** (per-seed range 33–50 %), and stripping function words leaves it at chance (**42 %**), so
+  the few above-floor hits were shared *function* words, not meaning. Surface features cannot cross a pure
+  semantic gap.
 
-**Significance:** the words wall is not a cliff but a **gradient**, and it is now *measured*: structure
-generalisation (done), morphology via sub-word features (done), semantics via learned meaning (the open
-step). Capability here is honest and verifiable — a learned, generalising router with its failure mode
-named — the right footing to grow the induced-computation/tool path into a dependable answerer.
+**Significance:** the words wall is a **gradient**, now honestly mapped: sentence *structure* (learned,
+solved), *morphology* via sub-word features (learned, solved — though fair hand-coding solves it too),
+and *semantics*/synonyms (**open** — at chance). The real next step is the only one that crosses the last
+gap: give words **learned distributional meaning** (§62's "reading" — representations the predictor
+already forms from a corpus) and route over those. That keeps item 2 tied to the core predictor rather
+than bolting on an LLM — and §64's honest value is the *measurement* that says exactly where the wall is.
 
 ---
 

@@ -1,27 +1,36 @@
 #!/usr/bin/env python3
 """
-intent.py -- the first bite out of the "words wall" (roadmap item 2: capability).
+intent.py -- a LEARNED question->intent router, and an HONEST measurement of how far it generalises.
 
 §61/§62 found the bottleneck is LANGUAGE: mapping a varied phrasing to the right intent. tool.py routed
-with HAND-CODED keywords ("plus"->add) -- brittle by construction: any phrasing whose words weren't
-anticipated misroutes. Here we *learn* the question->intent map and test the only thing that matters --
-GENERALISATION to phrasings never seen in training.
+with HAND-CODED keywords -- brittle. Here we *learn* the map (online logistic over binary word/symbol/
+char-3gram features, numbers masked to NUM) and test it held-out on three DISJOINT tiers of difficulty.
 
-Bit-native in spirit: the request becomes a vector of BINARY features (which word-tokens / operator
-symbols are present, numbers masked to a NUM token so it can't cheat on specific values), and a small
-online LOGISTIC classifier (the same stretch/squash logistic as the compressor's mixer) is trained by
-SGD to predict the intent. No deep net, no library -- a learned linear map over binary features.
+This version was rebuilt after an adversarial red-team (see learned_binary_address_machine.md §64) that
+caught two real defects in the first cut: (1) the HARD tier leaked verbatim training words, and (2) the
+hand-coded baseline was a strawman (whole-word match) -- a *fair* stem-substring hand-coder also solves
+HARD. Both are fixed here: HARD now contains only word FORMS that are NOT whole training words, and we
+report a FAIR stem baseline. We also expand NOVEL and report mean±range over many seeds, and a
+stop-word-stripped diagnostic, so no number rides on shared function words or a lucky seed.
 
-The honest test: TRAIN templates and HELD-OUT templates are DISJOINT sentence structures. The held-out
-ones reuse the discriminative content words (plus/sum, minus/less, times/product, +/-/*) inside NEW
-wrappers ("please ...", "i need ...", "give me ... please") -- so success means generalising across
-sentence structure, not memorising templates. Contrast: the hand-coded router from tool.py.
+Honest takeaways the code prints:
+  * routing is LEARNED, not hand-tuned -- and generalises across sentence STRUCTURE (EASY ~100%);
+  * char n-grams give a REAL lift on unseen word FORMS (de-leaked HARD) vs words-only features;
+  * a fair stem hand-coder ALSO solves HARD -- so the learned win is "no keyword hand-tuning", not a
+    capability hand-coding lacks;
+  * true SYNONYMS (NOVEL) sit at ~chance once function words are stripped -- the wall is NOT climbed;
+    crossing it needs learned word MEANING (§62's reading), the next step.
 """
-import re, random, math
+import re, random
 
-random.seed(0)
+LABELS = ["add", "sub", "mul"]
+LI = {k: i for i, k in enumerate(LABELS)}
+SEEDS = [0, 1, 2, 3, 7, 42, 100, 2024]
+STOP = {"what", "is", "are", "the", "of", "a", "an", "please", "i", "need", "give", "me", "tell",
+        "could", "you", "do", "get", "equals", "equal", "to", "by", "and", "from", "between", "with",
+        "up", "we", "us", "find", "calculate", "result", "value", "many", "much", "how"}
 
-# ---- intents and their TRAIN phrasings (number slots {a},{b}) ----
+# ---- TRAIN phrasings (number slots {a},{b}) ----
 TRAIN = {
     "add": ["what is {a} plus {b}", "add {a} and {b}", "what is the sum of {a} and {b}",
             "{a} plus {b}", "compute {a} + {b}", "what do you get adding {a} and {b}"],
@@ -30,8 +39,12 @@ TRAIN = {
     "mul": ["what is {a} times {b}", "multiply {a} and {b}", "what is the product of {a} and {b}",
             "{a} times {b}", "compute {a} * {b}", "what do you get multiplying {a} and {b}"],
 }
-# ---- EASY held-out: NEW structures, same discriminative words (tests structure generalisation) ----
-HELDOUT = {
+# discriminative whole-words present in TRAIN (used to GUARANTEE the HARD tier contains none of them)
+TRAIN_DISCRIM = {"plus", "add", "adding", "sum", "minus", "subtract", "less", "take", "away",
+                 "times", "multiply", "multiplying", "product"}
+
+# ---- EASY: new sentence STRUCTURE, same discriminative words (tests structure generalisation) ----
+EASY = {
     "add": ["please add {a} to {b}", "i need the sum of {a} and {b}", "give me {a} plus {b} please",
             "tell me {a} + {b}", "could you add up {a} and {b}"],
     "sub": ["please subtract {b} from {a}", "i need {a} minus {b}", "give me {a} less {b} please",
@@ -39,33 +52,34 @@ HELDOUT = {
     "mul": ["please multiply {a} by {b}", "i need the product of {a} and {b}", "give me {a} times {b} please",
             "tell me {a} * {b}", "could you multiply {a} and {b}"],
 }
-# ---- HARD held-out: unseen WORD FORMS (morphology). 'multiplied' shares substrings with 'multiply',
-#      so char n-grams can bridge them even though the exact word was never seen. ----
+# ---- HARD: unseen word FORMS only (each verified to contain NO whole training discriminative word);
+#      they share STEM SUBSTRINGS (add/sum, subtract, multipl) so char n-grams can bridge, words cannot ----
 HARD = {
-    "add": ["{a} added to {b}", "summing {a} and {b}", "the addition of {a} and {b}", "adding {a} to {b}"],
-    "sub": ["subtracting {b} from {a}", "the subtraction of {b} from {a}", "{a} minus {b} equals what",
-            "{b} subtracted from {a}"],
-    "mul": ["{a} multiplied by {b}", "multiplying {a} and {b}", "the multiplication of {a} and {b}",
-            "the product is {a} times {b}"],
+    "add": ["{a} added to {b}", "summing {a} and {b}", "the addition of {a} and {b}", "{a} summed with {b}"],
+    "sub": ["subtracting {b} from {a}", "the subtraction of {b} from {a}", "{b} subtracted from {a}",
+            "{a} decremented by {b}"],
+    "mul": ["{a} multiplied by {b}", "the multiplication of {a} and {b}", "multiplies {a} by {b}",
+            "{a} multiplied with {b}"],
 }
-# ---- NOVEL held-out: true SYNONYMS sharing NO word/substring with training (the residual wall) ----
+# ---- NOVEL: true SYNONYMS sharing no discriminative word/substring with training (the residual wall) ----
 NOVEL = {
-    "add": ["combine {a} and {b}", "the total of {a} and {b}"],
-    "sub": ["deduct {b} from {a}", "the difference between {a} and {b}"],
-    "mul": ["scale {a} by a factor of {b}", "the area of a {a} by {b} rectangle"],
+    "add": ["combine {a} and {b}", "the total of {a} and {b}", "increase {a} by {b}",
+            "{a} increased by {b}", "join {a} with {b}", "the combined amount of {a} and {b}"],
+    "sub": ["deduct {b} from {a}", "the difference of {a} and {b}", "decrease {a} by {b}",
+            "{a} reduced by {b}", "remove {b} from {a}", "how much remains of {a} after {b}"],
+    "mul": ["scale {a} by {b}", "{a} groups of {b}", "{a} lots of {b}", "{a} rows of {b} each",
+            "the area of a {a} by {b} grid", "repeat {a} for {b} copies"],
 }
-LABELS = ["add", "sub", "mul"]
-LI = {k: i for i, k in enumerate(LABELS)}
 
 
-def featurize(req, char_ng=True):
-    """request text -> set of BINARY feature strings. Numbers masked to NUM (value-agnostic). Word
-    tokens + operator symbols, plus optional char 3-grams so unseen word FORMS that share substrings
-    with seen words can still fire shared features. Presence of features, learned-weighted -- the only
-    'understanding'."""
+def featurize(req, char_ng=True, strip_stop=False):
+    """request -> set of BINARY features: word tokens (NUM-masked, optionally minus stop-words),
+    operator symbols, and (optionally) char 3-grams that let unseen word FORMS fire shared sub-features."""
     r = re.sub(r"\d+", " NUM ", req.lower())
     feats = set()
     for tok in re.findall(r"[a-z]+|NUM|[+\-*/]", r):
+        if strip_stop and tok in STOP:
+            continue
         feats.add("w:" + tok)
     if char_ng:
         s = "^" + re.sub(r"\s+", " ", r).strip() + "$"
@@ -74,28 +88,24 @@ def featurize(req, char_ng=True):
     return feats
 
 
-def make_examples(table, n_per):
+def make_examples(table, n_per, rng):
     ex = []
     for intent, templates in table.items():
         for t in templates:
             for _ in range(n_per):
-                a, b = random.randrange(2, 999), random.randrange(2, 999)
-                req = t.format(a=a, b=b)
-                ex.append((req, intent, a, b))
-    random.shuffle(ex)
+                a, b = rng.randrange(2, 999), rng.randrange(2, 999)
+                ex.append((t.format(a=a, b=b), intent))
+    rng.shuffle(ex)
     return ex
 
 
 class LogisticRouter:
-    """Multiclass logistic over binary features, online SGD. Bit-native lineage: a logistic mixer of
-    present/absent features, exactly the stretch/squash unit the compressor uses, trained to route."""
+    """Multiclass logistic over binary features, online SGD -- the compressor's stretch/squash unit,
+    trained to route. No keyword lists: everything is learned from the training phrasings."""
 
-    def __init__(self, lr=0.5, epochs=25, char_ng=True):
-        self.w = {}            # feature -> [weight per label]
-        self.b = [0.0] * len(LABELS)
-        self.lr = lr
-        self.epochs = epochs
-        self.char_ng = char_ng
+    def __init__(self, char_ng=True, strip_stop=False, lr=0.5, epochs=25):
+        self.w, self.b = {}, [0.0] * len(LABELS)
+        self.char_ng, self.strip_stop, self.lr, self.epochs = char_ng, strip_stop, lr, epochs
 
     def _scores(self, feats):
         s = list(self.b)
@@ -106,110 +116,124 @@ class LogisticRouter:
                     s[i] += wv[i]
         return s
 
-    @staticmethod
-    def _softmax(s):
-        m = max(s)
-        e = [math.exp(x - m) for x in s]
-        z = sum(e)
-        return [x / z for x in e]
-
-    def train(self, examples):
-        feats_cache = [(featurize(r, self.char_ng), LI[lab]) for r, lab, _, _ in examples]
+    def train(self, examples, rng):
+        import math
+        cache = [(featurize(r, self.char_ng, self.strip_stop), LI[lab]) for r, lab in examples]
         for _ in range(self.epochs):
-            random.shuffle(feats_cache)
-            for feats, y in feats_cache:
-                p = self._softmax(self._scores(feats))
+            rng.shuffle(cache)
+            for feats, y in cache:
+                s = self._scores(feats)
+                m = max(s); e = [math.exp(x - m) for x in s]; z = sum(e); p = [x / z for x in e]
                 for i in range(len(LABELS)):
-                    g = ((1.0 if i == y else 0.0) - p[i])
+                    g = (1.0 if i == y else 0.0) - p[i]
                     self.b[i] += self.lr * g * 0.1
                     for f in feats:
-                        wv = self.w.setdefault(f, [0.0] * len(LABELS))
-                        wv[i] += self.lr * g
+                        self.w.setdefault(f, [0.0] * len(LABELS))[i] += self.lr * g
 
     def predict(self, req):
-        feats = featurize(req, self.char_ng)
-        sc = self._scores(feats)
+        sc = self._scores(featurize(req, self.char_ng, self.strip_stop))
         return LABELS[max(range(len(LABELS)), key=lambda i: sc[i])]
 
 
-def hand_coded_route(req):
-    """tool.py's style: keyword if/else. Brittle -- only the anticipated words route correctly."""
+# ---- hand-coded baselines: the original (whole-word, tool.py style) and a FAIR stem-substring one ----
+def hand_whole(req):
     r = req.lower()
-    if "plus" in r or "add" in r or "sum" in r or "+" in r:
+    if any(w in r.split() for w in ["plus", "add", "sum"]) or "+" in r:
         return "add"
-    if "minus" in r or "subtract" in r or "difference" in r or "-" in r:
+    if any(w in r.split() for w in ["minus", "subtract", "difference"]) or "-" in r:
         return "sub"
-    if "times" in r or "multiply" in r or "product" in r or "*" in r:
+    if any(w in r.split() for w in ["times", "multiply", "product"]) or "*" in r:
         return "mul"
     return None
 
 
+STEMS = {"add": ["add", "sum", "plus", "+"], "sub": ["subtract", "minus", "less", "-"],
+         "mul": ["multipl", "times", "product", "*"]}
+
+
+def hand_stem(req):
+    r = req.lower()
+    for lab in LABELS:
+        if any(s in r for s in STEMS[lab]):
+            return lab
+    return None
+
+
 def acc(predict_fn, examples):
-    ok = sum(1 for req, intent, _, _ in examples if predict_fn(req) == intent)
-    return ok / len(examples)
+    return sum(1 for r, lab in examples if predict_fn(r) == lab) / len(examples)
+
+
+def run_seed(seed):
+    rng = random.Random(seed)
+    train = make_examples(TRAIN, 12, rng)
+    tiers = {name: make_examples(tab, 12, rng) for name, tab in
+             [("EASY", EASY), ("HARD", HARD), ("NOVEL", NOVEL)]}
+    routers = {
+        "hand_whole": hand_whole,
+        "hand_stem": hand_stem,
+        "learned_words": LogisticRouter(char_ng=False),
+        "learned_words+char": LogisticRouter(char_ng=True),
+        "learned_nostop+char": LogisticRouter(char_ng=True, strip_stop=True),
+    }
+    for r in routers.values():
+        if isinstance(r, LogisticRouter):
+            r.train(train, rng)
+    out = {}
+    for rn, r in routers.items():
+        fn = r.predict if isinstance(r, LogisticRouter) else r
+        out[rn] = {"train": acc(fn, train), **{t: acc(fn, ex) for t, ex in tiers.items()}}
+    return out
 
 
 def main():
-    print("=" * 84)
-    print("intent.py -- LEARN question->intent; test it on three TIERS of unseen phrasing (words wall)")
-    print("=" * 84)
+    try:
+        import sys
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
+    print("=" * 90)
+    print("intent.py -- LEARNED question->intent; HONEST held-out generalisation (post red-team, §64)")
+    print("=" * 90)
+    # guarantee HARD contains no whole training discriminative word (the leak the red-team caught)
+    hard_words = {w for ts in HARD.values() for t in ts for w in re.findall(r"[a-z]+", t.lower())}
+    leak = hard_words & TRAIN_DISCRIM
+    assert not leak, f"HARD leaks training words: {leak}"
+    print(f"HARD-tier leak check vs training discriminative words: {sorted(leak) or 'none'}  [OK]")
 
-    train_ex = make_examples(TRAIN, n_per=12)
-    easy = make_examples(HELDOUT, n_per=12)   # new structure, SAME discriminative words
-    hard = make_examples(HARD, n_per=12)      # unseen word FORMS (morphology) -> char n-grams may bridge
-    novel = make_examples(NOVEL, n_per=12)    # true SYNONYMS, no shared word/substring -> the residual wall
-    for name, tab in [("HELDOUT", HELDOUT), ("HARD", HARD), ("NOVEL", NOVEL)]:
-        assert not ({t for ts in TRAIN.values() for t in ts} & {t for ts in tab.values() for t in ts})
+    routers = ["hand_whole", "hand_stem", "learned_words", "learned_words+char", "learned_nostop+char"]
+    tiers = ["train", "EASY", "HARD", "NOVEL"]
+    agg = {rn: {t: [] for t in tiers} for rn in routers}
+    for s in SEEDS:
+        res = run_seed(s)
+        for rn in routers:
+            for t in tiers:
+                agg[rn][t].append(res[rn][t])
 
-    words_only = LogisticRouter(char_ng=False); words_only.train(train_ex)
-    full = LogisticRouter(char_ng=True); full.train(train_ex)
+    def cell(vals):
+        return f"{sum(vals)/len(vals)*100:5.1f} ({min(vals)*100:.0f}-{max(vals)*100:.0f})"
 
-    print(f"\ntrained on {len(train_ex)} requests / {sum(len(v) for v in TRAIN.values())} templates.  "
-          f"Three held-out tiers, each templates-DISJOINT from training:")
-    print("  EASY  = new sentence structure, same key words (plus/minus/times)")
-    print("  HARD  = unseen word FORMS (added, subtracting, multiplied) -- share substrings, not whole words")
-    print("  NOVEL = true synonyms (combine, deduct, scale) -- share NOTHING with training")
+    print(f"\nmean % correct (min-max) over {len(SEEDS)} seeds; train + 3 template-DISJOINT held-out tiers:")
+    print(f"  EASY = new structure, known words | HARD = unseen word FORMS (de-leaked) | NOVEL = synonyms\n")
+    print(f"{'router':<22}{'train':>14}{'EASY':>14}{'HARD':>14}{'NOVEL':>14}")
+    for rn in routers:
+        print(f"{rn:<22}" + "".join(f"{cell(agg[rn][t]):>14}" for t in tiers))
 
-    print(f"\n{'router':<26}{'train':>8}{'EASY':>8}{'HARD':>8}{'NOVEL':>8}")
-    rows = [
-        ("hand-coded (tool.py)", hand_coded_route),
-        ("learned (words only)", words_only.predict),
-        ("learned (words+char-ng)", full.predict),
-    ]
-    for name, fn in rows:
-        print(f"{name:<26}{acc(fn, train_ex)*100:7.1f}%{acc(fn, easy)*100:7.1f}%"
-              f"{acc(fn, hard)*100:7.1f}%{acc(fn, novel)*100:7.1f}%")
-
-    print("\n[char n-grams bridge unseen word FORMS] HARD examples routed by words+char-ng:")
-    seen = set()
-    for req, intent, _, _ in hard:
-        if intent in seen:
-            continue
-        seen.add(intent)
-        p = full.predict(req)
-        print(f"   {req!r:44} -> {p}   {'OK' if p == intent else 'WRONG'}")
-        if len(seen) == 3:
-            break
-
-    print("\n[the residual wall] NOVEL synonyms share no feature with training, so they misroute -- honest:")
-    seen = set()
-    for req, intent, _, _ in novel:
-        if intent in seen:
-            continue
-        seen.add(intent)
-        p = full.predict(req)
-        print(f"   {req!r:44} -> {p}   {'OK' if p == intent else 'WRONG (no shared feature)'}")
-        if len(seen) == 3:
-            break
-
-    e = acc(full.predict, easy) * 100; h = acc(full.predict, hard) * 100; nv = acc(full.predict, novel) * 100
-    print("\n" + "=" * 84)
-    print("VERDICT: question->intent is LEARNED (logistic over binary word/char features), not hand-coded.")
-    print(f"  It GENERALISES to new sentence structure ({e:.0f}% EASY) and, via char n-grams, to unseen")
-    print(f"  word FORMS ({h:.0f}% HARD) where the hand-coded router has fixed keywords. The HONEST wall:")
-    print(f"  true synonyms with no shared feature ({nv:.0f}% NOVEL) -- bridging those needs learned word")
-    print("  meaning (embeddings / reading), the next step. This is a real, measured bite out of the wall.")
-    print("=" * 84)
+    e = sum(agg['learned_words+char']['EASY']) / len(SEEDS) * 100
+    hw = sum(agg['learned_words']['HARD']) / len(SEEDS) * 100
+    hc = sum(agg['learned_words+char']['HARD']) / len(SEEDS) * 100
+    hs = sum(agg['hand_stem']['HARD']) / len(SEEDS) * 100
+    nv = sum(agg['learned_words+char']['NOVEL']) / len(SEEDS) * 100
+    nvs = sum(agg['learned_nostop+char']['NOVEL']) / len(SEEDS) * 100
+    print("\n" + "=" * 90)
+    print("VERDICT (honest, multi-seed):")
+    print(f"  * routing is LEARNED, no keyword hand-tuning, and generalises across STRUCTURE: EASY {e:.0f}%.")
+    print(f"  * char n-grams give a REAL lift on unseen word FORMS: HARD {hw:.0f}% (words) -> {hc:.0f}% (words+char).")
+    print(f"  * but a FAIR stem hand-coder also solves HARD ({hs:.0f}%) -- the learned win is 'no hand-tuning',")
+    print(f"    NOT a capability hand-coding lacks. Stated plainly, not overclaimed.")
+    print(f"  * true SYNONYMS are the UNCLIMBED wall: NOVEL {nv:.0f}% (per-seed range spans the ~33% chance")
+    print(f"    floor), and stripping function words leaves it at chance ({nvs:.0f}%) -- synonyms are NOT")
+    print(f"    learned. Crossing it needs learned word MEANING (§62's reading) -- the next step.")
+    print("=" * 90)
 
 
 if __name__ == "__main__":
