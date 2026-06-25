@@ -130,7 +130,7 @@ RMSProp. See [`ARCHITECTURE.md`](ARCHITECTURE.md), [`FLOW.md`](FLOW.md), and
 
 | File | What it is |
 |---|---|
-| [`learned_binary_address_machine.md`](learned_binary_address_machine.md) | The living design doc — every cycle, result, and verification verdict (64 sections) |
+| [`learned_binary_address_machine.md`](learned_binary_address_machine.md) | The living design doc — every cycle, result, and verification verdict (65 sections) |
 | [`BIT_NATIVE_INTELLIGENCE_FRAMING.md`](BIT_NATIVE_INTELLIGENCE_FRAMING.md) | The thesis (intelligence below language) + an evidence scorecard |
 | [`blm.py`](blm.py) | The original learned-address memory machine (SOM learning, recurrent addresses, latch) |
 | `mix.py` / `mixfast.py` | Online logistic context mixing (the simple model); `mixfast` uses lossless integer keys |
@@ -147,6 +147,7 @@ RMSProp. See [`ARCHITECTURE.md`](ARCHITECTURE.md), [`FLOW.md`](FLOW.md), and
 | `tool.py` | **Reliable structured response** — request → valid tool call → induced computation; 100% valid + correct on held-out, and the wall is *words*, not compute (§61) |
 | `separation.py` / `separation_data.py` | **Engine / language / knowledge separation** — math generalises (computed, not recalled); facts are absent until *read*; the engine is corpus-independent by construction *and* sabotage-sensitive (§62) |
 | `intent.py` | **The words wall, mapped** — a *learned* question→intent router (logistic over binary word/char features) generalises across sentence structure (+ unseen word *forms* via char n-grams; a fair stem hand-coder matches that); true *synonyms* stay at chance — the wall measured, not yet crossed (§64) |
+| `meaning.py` | **Synonyms via learned MEANING** — distributional (PPMI) vectors from an *unlabeled* corpus route novel synonyms (`deduct`→sub) at 92% where surface features score 0%; a mechanism demo, honestly scoped (the corpus supplies the separation; classical NLP, not the bit-native predictor) (§65) |
 | `bench.py` / `region.py` / `multi.py` / `gated.py` / … | The earlier capability probes (memory horizon, recall, latch) |
 
 ## Running it

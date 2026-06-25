@@ -2675,6 +2675,57 @@ than bolting on an LLM — and §64's honest value is the *measurement* that say
 
 ---
 
+## 65. Crossing the synonym wall with learned MEANING — a mechanism, honestly scoped (`meaning.py`)
+
+§64 left the last tier of the words wall unclimbed: true **synonyms** (`deduct`, `combine`, `scale`)
+share no surface feature with the training vocabulary, so a bag-of-features router routes them at chance.
+§64's own verdict named the fix — §62's *reading*: let words acquire **distributional meaning** from a
+corpus, then route over that. §65 builds it and, per standing practice, **red-teams it** (the file below
+was corrected after that pass; the numbers and framing here are the corrected ones).
+
+The method is the classic count-based one: **PPMI co-occurrence vectors** from an **unlabeled** reading
+corpus, then a nearest-centroid router whose operation centroids are built **only from the training
+words**. If `deduct` was read in subtraction-typed contexts its vector lands near `subtract`/`minus`
+(`cos(deduct, sub-centroid) ≈ 0.94` vs `0.0` to add), so it routes to sub — though the router was never
+told what `deduct` means.
+
+| over 5 seeds (chance = 33 %) | result |
+|---|---|
+| meaning router, TRAIN-word probes (sanity) | 100 % |
+| **meaning router, NOVEL synonyms (the wall)** | **91.7 %** |
+| surface router, NOVEL (word identity, control) | **0 %** — cannot route |
+| meaning router, NOVEL, token-**shuffled** corpus (control) | 33 % — class-collapse |
+
+Reading *more* → more meaning (NOVEL 17 % → 33 % → 67 % → 92 % at 8 → 24 → 80 → 240 sentences): it is
+**learned**, not hardcoded.
+
+**Findings (post red-team):**
+- **The mechanism is real.** Learned distributional vectors place novel synonyms with their operation's
+  training words well enough to route them (**92 %**), where surface identity is **0 %** (orthogonal) and
+  a token-shuffled corpus is **chance** — so the lift is genuine co-occurrence **structure**, learned by
+  reading, not leakage. A smooth cross-contamination curve (the red-team's: 0 %→100, 40 %→53, 100 %→45)
+  confirms a real distributional learner, not a brittle pattern-match.
+- **But the separation is SUPPLIED by the corpus, not discovered — stated plainly.** The frames place
+  each operation in a *disjoint context vocabulary* (larger/bigger vs smaller/fewer vs
+  repeatedly/manyfold). Collapse the frames to a *shared* vocabulary and the effect **vanishes** — NOVEL
+  *and* TRAIN both drop to 33 %. So the honest claim is "meaning crosses the wall **given a corpus that
+  uses the words in separated contexts**" — supervision-by-construction in continuous form, not magic.
+- **Honest limits, all shown in-code.** It works only for synonyms that actually **appear** (unlabeled) in
+  the reading corpus; only for a **small co-occurrence window** (window ≤ 2 → 100 %, window ≥ 8 → chance,
+  as wide windows blur the short frames); and it is **classical PPMI**, a separate method — **not** the
+  bit-native predictor and sharing no machinery with it. Real local corpora are too **sparse** for this
+  vocabulary (a frequency scan of 17 MB of local text finds `deduct` 0×, `subtract` 1×, `multiply` 3×), so
+  no real corpus is read — this is a *mechanism* demo, not a real-data result.
+
+**Significance:** §65 finishes **mapping** the words wall that §64 measured — structure (learned),
+morphology (learned), and now semantics/synonyms (**crossable by learned meaning**, demonstrated as a
+mechanism with hard controls). The honest residual is **data, not method**: real synonym generalisation
+needs a corpus that actually *uses* the vocabulary (a large real corpus does; our local text does not),
+and a genuinely *bit-native* version would learn such word meaning **through the predictor itself**
+rather than bolting on PPMI — the real next step on item 2, now precisely located.
+
+---
+
 ## Appendix — prior-art map (search terms, all bit/discrete, not LLM-specific)
 
 - **Semantic hashing** — learn compact binary codes preserving similarity (the learned "hash").

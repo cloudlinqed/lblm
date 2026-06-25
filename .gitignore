@@ -65,6 +65,7 @@ res_*
 !separation.py
 !separation_data.py
 !intent.py
+!meaning.py
 data/
 gv_out/
 
