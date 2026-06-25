@@ -2615,6 +2615,49 @@ the word/high-order contexts — the next push on this axis.
 
 ---
 
+## 64. The first bite out of the words wall — a LEARNED question→intent router (`intent.py`)
+
+Roadmap item 2 is *capability*, and §61/§62 already named its wall: **words** — mapping a varied phrasing
+to the right intent. `tool.py` routed with **hand-coded** keywords (`"plus" ⇒ add`), brittle by
+construction. §64 replaces that with a **learned** map and tests the only thing that matters:
+generalisation to phrasings never seen — across **three honesty tiers**.
+
+The model is bit-native in lineage: the request becomes a vector of **binary features** (which word
+tokens / operator symbols are present, numbers masked to a `NUM` token, plus char 3-grams), and a small
+**online logistic** unit — the same stretch/squash primitive the compressor mixes with — is trained by
+SGD to predict the intent (add / sub / mul). Train and every test tier are **template-disjoint**.
+
+| router | train | EASY¹ | HARD² | NOVEL³ |
+|---|---|---|---|---|
+| hand-coded (`tool.py` style) | 88.9 % | 86.7 % | 83.3 % | 16.7 % |
+| learned (words only) | 100 % | 100 % | 75.0 % | 50.0 % |
+| **learned (words + char n-grams)** | **100 %** | **100 %** | **100 %** | 50.0 % |
+
+¹ EASY = new sentence structure, same key words (plus/minus/times).  ² HARD = unseen word *forms*
+(added, subtracting, multiplied) — share substrings, not whole words.  ³ NOVEL = true synonyms
+(combine, deduct, scale) — share **nothing** with training.
+
+**Findings:**
+- **Routing is now learned and generalises.** 100 % on unseen sentence *structure*, and — once **char
+  n-grams** let unseen word *forms* fire shared sub-word features — 100 % on HARD, where `multiplied`
+  reaches `mul` though only `multiply`/`times`/`product` were ever seen. The hand-coded router is capped
+  by its fixed keyword list.
+- **The residual wall, stated not hidden.** True **synonyms** with no shared word or substring
+  (`deduct`, `combine`, `scale`) sit at **50 %** — barely above the 33 % three-class floor (what little
+  lift there is comes from incidental cues like the word `from` learnt as a sub feature). Surface
+  features cannot cross a pure semantic gap.
+- **Where the wall goes next.** Bridging NOVEL needs **learned word *meaning***, not more surface
+  features — i.e. exactly §62's "reading": let words acquire distributional representations from a
+  corpus (the compressor already learns such structure), then route over those. That is the next step
+  on this axis, and it connects item 2 back to the core predictor rather than bolting on an LLM.
+
+**Significance:** the words wall is not a cliff but a **gradient**, and it is now *measured*: structure
+generalisation (done), morphology via sub-word features (done), semantics via learned meaning (the open
+step). Capability here is honest and verifiable — a learned, generalising router with its failure mode
+named — the right footing to grow the induced-computation/tool path into a dependable answerer.
+
+---
+
 ## Appendix — prior-art map (search terms, all bit/discrete, not LLM-specific)
 
 - **Semantic hashing** — learn compact binary codes preserving similarity (the learned "hash").
