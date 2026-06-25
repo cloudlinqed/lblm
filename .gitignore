@@ -62,6 +62,8 @@ res_*
 !make_chat_data.py
 !add.py
 !tool.py
+!separation.py
+!separation_data.py
 data/
 gv_out/
 
