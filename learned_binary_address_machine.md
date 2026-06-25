@@ -2577,22 +2577,32 @@ helped — a clean ablation, not a guess.
 ¹ ICM looks tiny at 1 MB but **scales hard**: −0.0026 at 3 MB and −0.0019 at 11 MB (whole) — it earns its
 keep only once contexts accumulate bit-history (see the validation rows). On code it is the dominant win.
 
-**Validation (the cumulative engine — all of the above incl. ICM — vs the original baseline, held-out):**
+**Validation (cumulative engine — all of the above incl. ICM — vs the original baseline, held-out).**
+Both engines are *committed, reproducible binaries*: the improved `strong` (HEAD) and the frozen
+pre-§63 baseline `strongbase` (= `git show 85efe85~1:.../strong.rs`, built by `cargo build --release`).
+Each row states its exact byte-cap and `obits` (memory) — re-running either binary reproduces the cell
+to 6 d.p. (the engine is deterministic; no RNG):
 
-| corpus | baseline | improved | improvement |
-|---|---|---|---|
-| corpus_big 1 MB | 0.221636 | 0.216588 | −2.3 % |
-| corpus_big 3 MB | 0.218053 | 0.211762 | −2.9 % |
-| **corpus_big 11 MB** (whole) | **0.224637** | **0.217011** | **−3.4 %** |
-| corpus_big 11 MB (last-20 %) | 0.223195 | 0.214899 | −3.7 % |
-| code 0.8 MB | 0.159457 | 0.150989 | **−5.3 %** |
-| b100 1 MB | 0.241401 | 0.236463 | −2.0 % |
+| corpus | cap, obits | baseline (`strongbase`) | improved (`strong`) | improvement |
+|---|---|---|---|---|
+| corpus_big 1 MB | `1000000 23` | 0.221636 | 0.216588 | −2.28 % |
+| corpus_big 3 MB | `3000000 24` | 0.218053 | 0.211762 | −2.88 % |
+| **corpus_big 11 MB** (whole) | `0 25` | **0.224637** | **0.217011** | **−3.39 %** |
+| corpus_big 11 MB (last-20 %) | `0 25` | 0.223195 | 0.214899 | −3.72 % |
+| code 0.8 MB | `800000 23` | 0.159457 | 0.150989 | **−5.31 %** |
+| b100 1 MB | `1000000 23` | 0.241401 | 0.236463 | −2.04 % |
+
+*(Red-team note: the table previously omitted `obits`, so an auditor who measured 11 MB at `obits 23`
+got 0.217759/0.216233 instead — a real reproducibility defect, now fixed by stating the obits. The gain
+itself is **robust to memory**: at `obits 23` the 11 MB whole delta is still −3.22 % — smaller because
+the ICM/StateMaps have less room — vs −3.39 % at `obits 25`.)*
 
 **Findings:**
-- **A real, generalising gain that grows with data.** −3.4 % bits/bit on the 11 MB text proxy (−3.7 % on
-  the warmed-up last-20 %), and it **generalises** — text *and* code, 2.0–5.3 % — so it is no
-  corpus-big artefact. The gain **grows with scale** (1 MB −2.3 % → 11 MB −3.4 %): richer models earn
-  their keep as the stream lengthens — the opposite of overfitting.
+- **A real, generalising gain that grows with data.** −3.39 % bits/bit (whole) on the 11 MB text proxy,
+  −3.72 % on the warmed-up last-20 %, and it **generalises** — text *and* code, 2.0–5.3 % — so it is no
+  corpus-big artefact. The gain **grows with scale** (1 MB −2.28 % → 11 MB −3.39 %): richer models earn
+  their keep as the stream lengthens — the opposite of overfitting. (Strict causality / no future-bit
+  leakage was independently traced and confirmed in the red-team pass; bits/bit is a valid online loss.)
 - **Two kinds of win.** (a) *Direct structure*: the **previous-word model** (−0.0017 at 1 MB) and the
   **second (order-2) mixer** — text-bigram structure written into the address, the project mantra,
   bankable as bits. (b) *Indirect / nonstationary*: the **ICM/StateMap** models — a context's bit-HISTORY
