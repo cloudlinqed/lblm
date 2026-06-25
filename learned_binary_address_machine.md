@@ -2726,6 +2726,32 @@ rather than bolting on PPMI — the real next step on item 2, now precisely loca
 
 ---
 
+## 66. Predictive variant — prediction substitutes for the count (`bitmeaning.py`)
+
+A tightly-scoped follow-on to §65 (and red-teamed alongside it). §65 crossed the synonym wall by
+**counting** (PPMI) and honestly flagged that this was *"classical NLP, not the predictor."* §66 closes
+exactly that gap with a **count→predict substitution**: learn the word vectors as the **parameters of a
+predictor** — skip-gram with negative sampling (word2vec, Mikolov 2013: a logistic unit + online SGD
+predicting neighbours, the **same primitive class** the core's mixer uses, though sharing **none of its
+code**) — then route by §65's exact protocol (centroids from training words only).
+
+On the **same** corpus, controls, and scope as §65: NOVEL synonyms route at **100 %** (chance 33 %, 3
+seeds), surface **0 %**, shuffled corpus ~chance (decorrelated). The one piece of evidence §65's count
+method could not give is an **ablation that turns the predictor off**: with no SGD (`epochs=0`, random
+init) NOVEL sits at **34 % (chance)**; trained, **100 %** — so the lift *is* the predictor, not the
+representation lying around. (It is also strictly more robust than PPMI: skip-gram windows 1–8 all give
+100 %, where §65's PPMI decayed past the frame length.)
+
+**Honest scope (a non-claim, unchanged from §65):** this is a **substitution, not a new capability** — the
+same constructed corpus that *supplies* the operation-disjoint separation, the same "synonyms must appear
+in the (unlabeled) corpus" limit, and it is **self-contained word2vec** that shares the byte core's
+*primitive class* but **no code** with it. The result it adds is narrow and specific: crossing the
+synonym wall is **not special to count statistics** — a predictor's learned weights do it too. The
+genuinely bit-native step — learning such word meaning *inside the byte predictor itself* — remains the
+open work, and is the real next move on item 2.
+
+---
+
 ## Appendix — prior-art map (search terms, all bit/discrete, not LLM-specific)
 
 - **Semantic hashing** — learn compact binary codes preserving similarity (the learned "hash").
