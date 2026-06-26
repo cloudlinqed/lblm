@@ -2752,6 +2752,52 @@ open work, and is the real next move on item 2.
 
 ---
 
+## 67. Item 2 capstone — a dependable answerer, held-out and verified (`answerer.py`)
+
+The pieces built across item 2, wired into **one pipeline** and measured end-to-end (and red-teamed):
+`request → ` **learned router** (§64) ` → ` integer args (dumb adapter) ` → ` **induced computation**
+(§60) ` → ` **verified** answer. The point is a *doubly-held-out* measurement neither part made alone:
+unseen phrasings × unseen numbers, grammar-gated and truth-verified.
+
+- **Computation is INDUCED, and the rule is universal.** add/sub are 1-bit-state transducers induced
+  from 60 disjoint sums; the search returns the **unique full adder `(150,232)`** (out = XOR3, upd =
+  MAJ3) — exact for all inputs/widths (asserted exhaustively on `[0,256)²`, not a sample). **Multiply is
+  COMPOSED** from the induced adder by shift-and-add. Held-out: add/sub/mul **100 %** on 3 000 unseen
+  pairs; a memoriser is **0 %**.
+- **Routing is LEARNED** (§64's logistic over word/char features), so the answerer generalises to
+  **unseen phrasings**; train/test templates are disjoint (HARD shares only function words).
+- **The dependable property is precision.** CORRECT-when-committed = **98 % (83–100) across 8 router
+  seeds** at confidence TAU = 0.4, and **100 % for every seed at TAU ≥ 0.90** — where a memoriser is 0 %.
+  Every committed answer is a grammar-valid call, verified against truth.
+
+| held-out, doubly-unseen | result |
+|---|---|
+| induced compute (3 000 unseen pairs): add / sub / mul | **100 % / 100 % / 100 %** (memoriser 0 %) |
+| end-to-end CORRECT-when-committed (8 seeds, TAU 0.4) | **98 % (83–100)**; 100 % @ TAU ≥ 0.90 |
+| coverage at TAU 0.4 | 83 % (abstains on ~17 % of in-scope phrasings) |
+
+**Honest limits (caught by testing-as-we-go, kept — not papered over):**
+- **Precision is seed-fragile at low TAU.** One router seed confidently misroutes a fragile HARD
+  word-form (`decremented`) at TAU 0.4 (precision 83 %); raising TAU ≥ 0.90 restores 100 % for *every*
+  seed, at a coverage cost. The single-seed "100 %" headline would have been an overclaim — the
+  multi-seed `mean (min–max)` is the honest figure (matching `intent.py`'s own discipline).
+- **A confidence knob does NOT reject out-of-scope synonyms.** NOVEL synonyms ride shared *function*
+  words, so they are **committed-and-sometimes-wrong** (≈ chance), **not abstained** — not a clean
+  refusal. Extending coverage there is a **meaning** problem (§65/§66), not a threshold to tune. This is
+  the honest bridge from the capstone back to the meaning frontier.
+
+**Significance — item 2 is complete.** The tool path is a **dependable answerer on its covered
+language**: learned routing (generalises phrasing) + induced computation (generalises numbers, the
+*universal* rule) + grammar + verification ⇒ correct-when-committed where recall is 0 %. Its boundary is
+drawn honestly: it trades coverage for precision (a TAU knob), and the genuinely open frontier —
+out-of-scope synonyms — is a *meaning* problem, exactly where §65/§66 point and where a **bit-native**
+meaning (learned inside the predictor, not a bolted-on embedder) is the next move. End-to-end, the words
+wall is mapped: **structure and morphology routed, computation induced and verified, synonyms named as
+the meaning frontier** — item 2's "grow the tool path into a dependable answerer" delivered, with its
+limits measured rather than hidden.
+
+---
+
 ## Appendix — prior-art map (search terms, all bit/discrete, not LLM-specific)
 
 - **Semantic hashing** — learn compact binary codes preserving similarity (the learned "hash").

@@ -67,6 +67,7 @@ res_*
 !intent.py
 !meaning.py
 !bitmeaning.py
+!answerer.py
 data/
 gv_out/
 
