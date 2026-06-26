@@ -2798,6 +2798,58 @@ limits measured rather than hidden.
 
 ---
 
+## 68. Real-data validation on a HuggingFace dataset (`realtest.py`, wikitext-103)
+
+Before scaling (item 3), the foundation was tested on **real** data — not the local `corpus_big` proxy,
+not the synthetic §65/§66 corpora. `realtest.py` fetches real Wikipedia text (`Salesforce/wikitext`,
+wikitext-103-raw; ~1.4 MB, via the HF datasets-server, stdlib only — no `datasets`/`pyarrow`) and re-runs
+two project claims, reproducibly and **red-teamed** (the meaning verdict below was *corrected* after the
+red-team caught a spin).
+
+**(A) Compression — the headline holds on real data.** Online (causal) cross-entropy on real Wikipedia
+vs general-purpose compressors on the same bytes:
+
+| compressor | bits/bit (real wikitext) |
+|---|---|
+| gzip -9 | 0.357 |
+| xz/lzma -9 | 0.293 |
+| bzip2 -9 | 0.283 |
+| strongbase (pre-§63) | 0.2356 |
+| **strong (improved)** | **0.2285** |
+| *(reference, not run: lpaq1 ~0.20, paq8 ~0.16, cmix ~0.15)* | |
+
+The bit-native core **beats every general-purpose compressor** (gzip/bzip2/xz) on real text, and the
+**§63 improvement holds on real data at −3.0 %** (strongbase → strong), inside the documented corpus_big
+band (2.9–3.4 %) — so the gain is *not* a proxy artefact. Honest bounds (kept): it does **not** beat its
+peer class (dedicated CM/PPM: lpaq1/paq8/cmix — the README ladder), and the core's number is idealised
+cross-entropy (no coder/header), an asymmetry that is < 2.2e-4 of the file here and changes no ranking.
+
+**(B) Meaning — method, not data (a corrected verdict).** Does distributional meaning cluster *real*
+synonyms on real text? Headline metric: is the synonym a top-10 nearest neighbour (usable)?
+
+| method (same 1.4 MB real text) | synonyms in top-10 NN |
+|---|---|
+| naive PPMI (window 4, no smoothing) | 1/12 |
+| **smoothed PPMI** (window 2, α = 0.75, rare-context drop) | **4/12** |
+
+The naive readout barely clusters synonyms — but a **standard better method recovers 4/12 on the *same*
+data, zero extra text** (`famous→popular` rank 1, `began→started` rank 2, `city→town` rank 3,
+`built→constructed` rank 5). Changing **only the method, on identical data**, moves it — so the weak
+result is a **method** limitation, not a data one. *An earlier draft concluded "this confirms §65/§66 —
+the bottleneck is data," without testing either axis; the red-team showed **5× more data left naive NN
+flat while a method change fixed it on identical data**, so that conclusion was **spin** and was removed.*
+Honest statement: the distributional **mechanism is real on real text once the embedding is decent**;
+whether more data helps further is untested here.
+
+**Significance.** The real-data test does two things. It **confirms the compression headline on real
+Wikipedia** (beats gzip/bzip2/xz; §63 holds) — a solid foundation to scale in item 3. And it is a clean
+case of the **red-team discipline working under pressure**: a tempting "real text confirms our story"
+conclusion was actually *false* (the limit is the embedding *method*, not data), and testing caught it.
+The item-2 follow-on is now sharper — distributional meaning works on real text with a decent embedding,
+so crossing the synonym wall on real data is a **better embedding** problem, not merely *more text*.
+
+---
+
 ## Appendix — prior-art map (search terms, all bit/discrete, not LLM-specific)
 
 - **Semantic hashing** — learn compact binary codes preserving similarity (the learned "hash").
