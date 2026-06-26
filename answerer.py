@@ -132,6 +132,49 @@ def make_tests(tables, rng, n_per=8):
     return tests
 
 
+def build():
+    """train the learned router once (fast) -- the interactive/one-shot user-test entry points reuse it."""
+    rng = random.Random(0)
+    r = LogisticRouter(char_ng=True); r.train(make_examples(TRAIN, 12, rng), rng)
+    return r
+
+
+def respond_show(router, req):
+    """answer ONE request, showing the steps so a user sees the learned route + induced compute, or an
+    HONEST abstain (it never guesses)."""
+    op, margin = route_conf(router, req)
+    nums = [int(x) for x in re.findall(r"\d+", req)]
+    print(f"   route   : {op}   (confidence {margin:.2f} [{'ok' if margin >= TAU else 'LOW'}])")
+    print(f"   numbers : {nums}")
+    r = respond(router, req)
+    if r is None:
+        why = "router not confident enough" if margin < TAU else "need two numbers in the request"
+        print(f"   ANSWER  : (abstain -- {why}; it won't guess)")
+    else:
+        o, a, b, ans = r
+        print(f"   ANSWER  : {o}({a}, {b}) = {ans}    [induced computation, grammar-valid, verifiable]")
+
+
+def interactive():
+    router = build()
+    print("=" * 86)
+    print("DEPENDABLE ANSWERER -- user test.  Type an arithmetic request; it routes (LEARNED), computes")
+    print("(INDUCED add/sub/mul), verifies, or honestly ABSTAINS (it will not guess).  Type 'quit' to exit.")
+    print("  try:  what is 347 plus 891?   |   subtract 18 from 200   |   multiply 13 and 7")
+    print("        7 times 6   |   the sum of 40 and 2   |   what is the capital of France?  (out of scope)")
+    print("=" * 86)
+    while True:
+        try:
+            req = input("\nyou> ").strip()
+        except (EOFError, KeyboardInterrupt):
+            print("\nbye."); break
+        if not req:
+            continue
+        if req.lower() in ("quit", "exit", "q"):
+            print("bye."); break
+        respond_show(router, req)
+
+
 def main():
     try:
         import sys
@@ -224,4 +267,15 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    import sys
+    try:
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
+    args = sys.argv[1:]
+    if args and args[0] in ("-i", "--interactive", "--chat"):
+        interactive()                               # python answerer.py -i   (type your own requests)
+    elif args:
+        respond_show(build(), " ".join(args))       # python answerer.py "what is 347 plus 891?"
+    else:
+        main()                                      # python answerer.py      (the held-out validation)
