@@ -70,6 +70,7 @@ res_*
 !answerer.py
 !realtest.py
 !honestmap.py
+!genmem.py
 data/
 gv_out/
 

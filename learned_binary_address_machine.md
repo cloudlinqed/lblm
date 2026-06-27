@@ -2850,6 +2850,56 @@ so crossing the synonym wall on real data is a **better embedding** problem, not
 
 ---
 
+## 69. Toward generative intelligence — a leak-free memorization-vs-generalization instrument (`genmem.py`)
+
+The goal: a stronger byte-level generative model with long-range memory, where success = **generalization
+(intelligence), not memorization**. Rather than build a (worse-)LLM, we built the instrument the design
+fan-out called for: keep **memorization** (the verbatim byte-match model = a copy oracle) and
+**abstraction** (the logistic mixer) as *separate, individually-ablatable* channels, add **one new
+long-range channel that is structurally incapable of verbatim copy** — a multi-timescale leaky-integrator
+**reservoir** of byte-class features (a bounded smooth running summary; it cannot replay a span) — and
+**measure**, on the official leak-free **wikitext-103** train/test split, whether it adds generalization.
+
+**Headline metric = intelligence:** copy-ablated, **13-byte-decontaminated**, held-out bits/byte, reservoir
+ON vs OFF (a gain here is generalization *by construction*: the channel can't copy, the match model is
+off, and every test span sharing a ≥13-byte substring with train is excised — ~66 % of test bytes remain).
+
+**Result (3 reservoir designs; copy OFF, decontaminated wt103 test):**
+
+| channel | held-out bits/byte |
+|---|---|
+| baseline (orders only) | 2.3022 |
+| **+ reservoir (the headline)** | 2.3789 — *worse* |
+| + **scrambled** reservoir (sanity: random features) | 2.3593 — *also worse* |
+| memorization (match/copy) gain, copy ON vs OFF | **+0.0111** — consistent, all runs |
+
+**Findings (honest):**
+- **The only long-range mechanism that improves held-out prediction is verbatim MEMORIZATION** (the match
+  model, +0.011 bits/byte, consistent across every run and design).
+- **The fixed reservoir adds NO generalization.** Across three principled designs — a count-table state
+  (≈ noise), continuous mixer features (destabilized the simple SGD mixer), and continuous features +
+  **RMSProp** (stable mixing) — it was noise or actively harmful. The **scrambled control** (30 *random*
+  features) *also* hurt (≈ −0.06), revealing the dominant effect: adding fixed long-range **capacity
+  overfits** on this data and hurts held-out, structured or not.
+- So when intelligence is measured rigorously (copy-ablated, decontaminated, leak-free), a **hand-crafted**
+  long-range memory provides none here — the available long-range gain is memorization.
+
+**Significance + the honest implication.** This is direct, falsifiable evidence for the wall the project
+keeps hitting: **generalizing long-range structure in a byte model is hard because it needs *learned*
+memory** (the model learns *what* to remember) — which is what attention/SSMs do with deep learning at
+scale; a from-scratch CPU context-mixer's "long range" is fundamentally the match model = **memorization**.
+The durable asset is the **instrument**: a leak-free, copy-ablated, decontaminated, scrambled-controlled
+testbed that *cannot mistake memorization for intelligence* (it rejected three designs). The next
+genuinely-different step (the design's v2) is a **learned diagonal-linear recurrent memory** trained online
+by RTRL (O(m)/step, no BPTT) — a real build with uncertain payoff at CPU scale — versus the honest
+alternative the project's own evidence supports: **this architecture's strength is prediction/compression**
+(lpaq1-class, beats gzip/bzip2/xz on real text, §63/§68), **not generative intelligence**. Scale caveat:
+0.5–2.8 MB is tiny; the negative is robust for *fixed* features at this scale, and the scrambled-overfit
+signal indicates scale is part of the difficulty — but the instrument now lets any future claim of
+"added intelligence" be settled leak-free, the same way every other claim in this log was.
+
+---
+
 ## Appendix — prior-art map (search terms, all bit/discrete, not LLM-specific)
 
 - **Semantic hashing** — learn compact binary codes preserving similarity (the learned "hash").

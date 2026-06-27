@@ -130,7 +130,7 @@ RMSProp. See [`ARCHITECTURE.md`](ARCHITECTURE.md), [`FLOW.md`](FLOW.md), and
 
 | File | What it is |
 |---|---|
-| [`learned_binary_address_machine.md`](learned_binary_address_machine.md) | The living design doc — every cycle, result, and verification verdict (68 sections) |
+| [`learned_binary_address_machine.md`](learned_binary_address_machine.md) | The living design doc — every cycle, result, and verification verdict (69 sections) |
 | [`BIT_NATIVE_INTELLIGENCE_FRAMING.md`](BIT_NATIVE_INTELLIGENCE_FRAMING.md) | The thesis (intelligence below language) + an evidence scorecard |
 | [`blm.py`](blm.py) | The original learned-address memory machine (SOM learning, recurrent addresses, latch) |
 | `mix.py` / `mixfast.py` | Online logistic context mixing (the simple model); `mixfast` uses lossless integer keys |
@@ -151,6 +151,7 @@ RMSProp. See [`ARCHITECTURE.md`](ARCHITECTURE.md), [`FLOW.md`](FLOW.md), and
 | `bitmeaning.py` | **Predictive variant** — the same wall falls when meaning is *predicted* (skip-gram/word2vec) instead of counted (PPMI): NOVEL 100%, and an epochs=0 ablation (no SGD → chance) shows the lift is the predictor; a count→predict substitution, same scope as §65 (§66) |
 | `answerer.py` | **Item 2 capstone** — learned route (§64) + induced compute (§60; multiply *composed* from the induced adder) + verification: end-to-end held-out (unseen phrasings × unseen numbers) **correct-when-committed 98% (83–100) across seeds, memoriser 0%**; honest limits — seed-fragile at low confidence, and synonyms need *meaning* not a threshold (§67) |
 | `realtest.py` | **Real-data validation** — on a real HuggingFace dataset (wikitext-103): compression beats gzip/bzip2/xz on real Wikipedia and the §63 gain holds (−3%); a meaning test where the red-team caught a *spin* (the weak result is method-, not data-limited — a better embedding gets 4/12 synonyms on the same text) (§68) |
+| `genmem.py` | **Intelligence-vs-memorization instrument** — leak-free wikitext-103, 13-byte-decontaminated, copy-ablated, scrambled-controlled: measures whether long-range memory adds *generalization* or *recall*. Honest finding: only memorization (the match model) helps held-out; a hand-crafted reservoir adds none (§69) |
 | `bench.py` / `region.py` / `multi.py` / `gated.py` / … | The earlier capability probes (memory horizon, recall, latch) |
 
 ## Running it
