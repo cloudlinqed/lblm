@@ -69,6 +69,7 @@ res_*
 !bitmeaning.py
 !answerer.py
 !realtest.py
+!honestmap.py
 data/
 gv_out/
 
