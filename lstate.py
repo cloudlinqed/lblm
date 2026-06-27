@@ -33,9 +33,10 @@ def sigmoid(z):
 
 
 class Model:
-    def __init__(self, use_match=True, use_state=True, order_cap=6, lr=0.004, lr_rec=0.02, scramble=False, seed=0):
+    def __init__(self, use_match=True, use_state=True, order_cap=6, lr=0.004, lr_rec=0.02, scramble=False,
+                 fixed_long=False, seed=0):
         self.use_match, self.use_state = use_match, use_state
-        self.lr, self.lr_rec, self.scramble = lr, lr_rec, scramble
+        self.lr, self.lr_rec, self.scramble, self.fixed_long = lr, lr_rec, scramble, fixed_long
         self.orders = [o for o in ORDERS if o <= order_cap]; self.NM = len(self.orders)
         self.NS = M if use_state else 0
         self.NIN = self.NM + (1 if use_match else 0) + self.NS
@@ -47,8 +48,13 @@ class Model:
         self.sbase = self.NM + (1 if use_match else 0)        # index of first state feature in w/sts
         if use_state:
             rng = random.Random(seed)
-            self.alpha = [math.log((0.5 + 0.49 * (j / (M - 1))) / (1 - (0.5 + 0.49 * (j / (M - 1)))))
-                          for j in range(M)]                  # decays spread log-uniform-ish 0.5..0.99
+            if fixed_long:
+                # FORCE long-range: decays fixed at a in [0.90 .. 0.999] (timescales ~10 .. ~1000 bytes),
+                # NOT learned -> the state cannot collapse to the short range the orders already cover.
+                avals = [0.90 + (0.999 - 0.90) * (j / (M - 1)) for j in range(M)]
+            else:
+                avals = [0.5 + 0.49 * (j / (M - 1)) for j in range(M)]     # 0.5 .. 0.99, learned
+            self.alpha = [math.log(a / (1 - a)) for a in avals]
             self.W = [[(rng.random() - 0.5) * 0.1 for _ in range(XDIM)] for _ in range(M)]
             self.h = [0.0] * M; self.ea = [0.0] * M; self.eW = [[0.0] * XDIM for _ in range(M)]
             self.Ghj = [0.0] * M
@@ -105,17 +111,21 @@ class Model:
                 if learn and not self.scramble:
                     for j in range(M):
                         gj = self.Ghj[j]
-                        self.alpha[j] -= self.lr_rec * gj * self.ea[j]
+                        if not self.fixed_long:                  # learn decays only when not forced-long
+                            self.alpha[j] -= self.lr_rec * gj * self.ea[j]
                         Wj, eWj = self.W[j], self.eW[j]
                         for k in range(XDIM):
                             Wj[k] -= self.lr_rec * gj * eWj[k]
                 for j in range(M):
                     a = sigmoid(self.alpha[j]); hpr = self.h[j]
-                    self.ea[j] = a * (1 - a) * hpr + a * self.ea[j]
                     Wj, eWj = self.W[j], self.eW[j]; wr = 0.0
                     for k in range(XDIM):
-                        eWj[k] = x[k] + a * eWj[k]; wr += Wj[k] * x[k]
-                    self.h[j] = a * hpr + wr
+                        wr += Wj[k] * x[k]
+                    # proper EMA: h = a*hpr + (1-a)*wr  -> bounded state AND bounded RTRL traces
+                    self.ea[j] = a * (1 - a) * (hpr - wr) + a * self.ea[j]
+                    for k in range(XDIM):
+                        eWj[k] = (1 - a) * x[k] + a * eWj[k]
+                    self.h[j] = a * hpr + (1 - a) * wr
                 self.Ghj = [0.0] * M
             self.htail = ((self.htail << 8) | b) & ((1 << 48) - 1); self.cur = 0; self.phase = 0
         return cost

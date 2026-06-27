@@ -2900,6 +2900,53 @@ signal indicates scale is part of the difficulty — but the instrument now lets
 
 ---
 
+## 70. The no-copy intelligence track — a learned recurrent state that reaches parity, not past, the orders (`lstate.py`)
+
+The bridge from memorization to intelligence, attempted concretely. Per the plan: keep §69's gate, and
+replace the FIXED reservoir (which was indistinguishable from noise) with a **LEARNED, tiny (m=12),
+diagonal-linear recurrent state** trained online by **RTRL** — `h_j = a_j h_j + (1−a_j) W_j·x` (a bounded
+EMA; `a_j = σ(α_j)`; `x` = the byte's signed bits), fed as continuous features to the mixer. m=12 floats
+**cannot store a span** → any held-out gain is abstraction, not copy. Gated by the genmem protocol:
+match/copy OFF, 13-byte-decontaminated held-out, state ON/OFF/SCRAMBLED, a frozen (train-attributable)
+read, and the copy gain reported separately.
+
+**Result (leak-free wt103, copy OFF, decontaminated held-out bits/byte):**
+
+| | 450 KB | 1200 KB |
+|---|---|---|
+| state − baseline (the win condition; <0 = beats orders) | +0.0016 | +0.0013 |
+| state − scrambled noise floor (>0 = real learned signal) | **+0.021** | **+0.021** |
+| match/copy (memorization) gain | +0.014 (consistent, every run) | |
+
+**Findings (honest):**
+- **The learned state genuinely learns.** It beats the SCRAMBLED noise floor by a robust, stable **+0.02**
+  at every data size — unlike §69's fixed reservoir, which *matched* noise. The RTRL mechanism captures
+  real generalisable structure, and the signal is data-scalable.
+- **But it reaches PARITY with the local orders, not past them.** Only **+0.0013** above the no-state
+  baseline at 1.2 MB (shrinking with data, but never crossing). What it learns is largely **redundant**
+  with the order-0..6 contexts, so it ties them rather than adding net generalisation.
+- **Forcing the state long-range doesn't help** (a stable long-range variant ties the learned-decay one).
+  An earlier *unbounded* recurrence DIVERGED with long decays (RTRL trace explosion — a numerical artefact
+  the EMA form fixes), a reminder to trust the gate's controls over a single number.
+- **Memorization remains the only reliable long-range gain** (+0.014, every run).
+
+**Significance — the honest line.** The bridge is **half-built**: a learned, tiny, no-copy memory that
+*genuinely learns* (clearly above noise, data-scalable) and reaches **parity** with local context — a real
+step beyond §69's noise-level reservoir — but does **not** beat the order baseline. The honest target
+(a compact learned state that *beats* the match-OFF order baseline) is **not met**: the state TIES the
+orders rather than transcending them. This is direct evidence that a *compact* recurrent state, even
+learned, captures structure largely redundant with local n-gram context on natural text; transcending it
+(true long-range generalisation) is exactly what needs **rich learned representations at scale** — the
+deep-learning regime a from-scratch CPU diagonal-linear state cannot reach. The durable assets are the
+**rigorous leak-free gate** (`genmem.py`) and the **corrected RTRL state channel** (`lstate.py`); the
+remaining levers (Path B induced primitives as a richer state input §50/§54, residual-driven discovery,
+Rust-scale data) are real but enter the rich-representation/scale frontier. The resting place the
+project's own evidence supports: **a from-scratch predictor that beats standard compressors on real text
+(§63/§68), plus a rigorous intelligence gate that shows exactly where compact byte-level "intelligence"
+plateaus — at parity with local context, with memorization as the only reliable long-range gain.**
+
+---
+
 ## Appendix — prior-art map (search terms, all bit/discrete, not LLM-specific)
 
 - **Semantic hashing** — learn compact binary codes preserving similarity (the learned "hash").
