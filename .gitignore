@@ -72,6 +72,7 @@ res_*
 !honestmap.py
 !genmem.py
 !lstate.py
+!prims.py
 data/
 gv_out/
 

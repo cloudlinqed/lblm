@@ -2947,6 +2947,46 @@ plateaus — at parity with local context, with memorization as the only reliabl
 
 ---
 
+## 71. Item 3 — induced-computation channels: real signal, a sample-efficiency edge, but parity at scale (`prims.py`)
+
+Per item 3 of the bridge plan: promote Path-B primitives — **stateful counters/detectors** — to
+first-class, individually-ablatable predictor channels: bracket-nesting **depth**, quote state, digit-run
+length, word-position, line-position, caps-run. Each is causal and becomes a count-model keyed by its
+computed state, gated by the genmem protocol (copy OFF, 13-byte-decontaminated held-out, per-channel
+ablation, a SCRAMBLED-bucket control). A counter is **unbounded state a fixed-window n-gram cannot
+represent** → if it lowers copy-off held-out past the orders, the gain is *computation*, not copy.
+
+**Per-primitive (450 KB), gap vs the order baseline (<0 = beats orders):** only **two of six** help —
+`paren` nesting-depth (−0.0011) and `word` position (−0.0017); the other four (quote/digit/line/caps) are
+redundant with the orders and hurt. The helpful pair beats its own scrambled control by +0.009.
+
+**Robustness check (the decisive part) — `paren+word` vs baseline across data sizes:**
+
+| train | gap vs baseline | vs scrambled noise |
+|---|---|---|
+| 450 KB | **−0.0026** | +0.0087 |
+| 1200 KB | **−0.0020** | +0.0082 |
+| 2700 KB | **+0.0018** | +0.0061 |
+
+The cross is real at 450–1200 KB but **vanishes (flips positive) at 2.7 MB**: as data grows, the order
+models learn the same structure the counters encode, so the counters become **redundant**. Net: **parity
+at scale**, with a small **sample-efficiency** edge at low data (a counter generalises from few examples
+faster than the orders, which need more data to learn the same regularity). The channels carry real signal
+(they beat their scrambled noise floor at every size), just not enough to transcend the orders. *The gate
+caught the small-data cross as non-robust at 2.7 MB — one slice short of a false claim.*
+
+**Honest verdict (items 2 AND 3 together).** Every no-copy channel built — the smooth learned RTRL state
+(§70) and now induced computation (§71) — captures REAL structure (robustly beats its scrambled noise
+floor) but reaches **parity** with the local order models, not past them. Two independent mechanisms hit
+the **same ceiling**, and that consistency is itself the finding: on natural text at CPU scale, no-copy
+"intelligence" channels are largely **redundant with local n-gram context**; transcending it needs rich
+learned representations at scale (the deep-learning regime). **Memorization (the match model, +0.014)
+remains the only reliable long-range gain.** Durable assets: the leak-free intelligence gate plus two
+clean, ablatable no-copy channels and a precise, falsifiable map of exactly where they plateau — parity
+with local context, with a measured sample-efficiency edge that the orders erase as data grows.
+
+---
+
 ## Appendix — prior-art map (search terms, all bit/discrete, not LLM-specific)
 
 - **Semantic hashing** — learn compact binary codes preserving similarity (the learned "hash").
